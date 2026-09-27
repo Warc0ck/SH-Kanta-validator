@@ -58,28 +58,16 @@ def ensure_clinical_document_xml(asiakirjaXml, source_filename: str = None, verb
     - CDATA-lohkon sisältö otetaan ulos ennen tarkistusta.
     Heittää ValueError, jos ei löydy.
     """   
-
-
     def _to_text(b):
-        """
-        Muuntaa UTF-8-sisällön "ANSI-näkyväksi" (cp1252) 
-        UTF-8-tavut tulkitaan cp1252-merkkeinä. Esim. 'ä' -> 'Ã¤', 'ö' -> 'Ã¶', 'å' -> 'Ã¥'.
+        if isinstance(b, bytes):
+            for enc in ("utf-8", "utf-16", "utf-16le", "utf-16be", "latin-1"):
+                try:
+                    return b.decode(enc)
+                except UnicodeDecodeError:
+                    continue
+            return b.decode("utf-8", errors="replace")
+        return b
 
-        Syöte oletetaan UTF-8-muodossa.
-        """
-        
-        # Oletetaan aina UTF-8, ei tarkisteta bytes-tyyppiä.
-        # Jos b on bytes, dekoodataan UTF-8:ksi; muuten muutetaan str:ksi.
-        text = b.decode("utf-8") if isinstance(b, (bytes, bytearray)) else str(b)
-       
-        # Muutetaan ANSI-yhteensopivaksi:
-        # 'ignore' pudottaa merkit 
-        # 'strict' antaa virheen
-        ansi_text = text.encode("cp1252", errors="strict").decode("cp1252")
-               
-        return ansi_text
-        
-    
     def _clean_text(s: str) -> str:
         return s.replace("\ufeff", "").strip()
 
@@ -329,5 +317,5 @@ run_button = tk.Button(
 )
 run_button.pack(pady=20)
 
-# Käynnistä Tkinter-käyttöliittymä
+# Käynnistä Tkinter
 root.mainloop()

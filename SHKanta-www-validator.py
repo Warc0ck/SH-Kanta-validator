@@ -202,7 +202,7 @@ def extract_clinical_doc_identifiers(xml_text: str):
 _CLINICALDOC_REGEX = re.compile(r"<[^>]*ClinicalDocument xmlns\b", re.IGNORECASE)
 
 # === Apufunktio: XML-syöte tiedostona tai liitettynä tekstinä ===
-def xml_syote(otsikko: str, avain: str):
+def xml_syote(otsikko: str, key: str):
     with st.container(border=True):
         st.markdown(f"**{otsikko}**")
 
@@ -210,7 +210,7 @@ def xml_syote(otsikko: str, avain: str):
             "Syöttötapa",
             ["📁 Tiedosto", "📝 Teksti"],
             horizontal=True,
-            key=f"{avain}_tapa",
+            key=f"{key}_tapa",
             label_visibility="collapsed",
         )
 
@@ -218,7 +218,7 @@ def xml_syote(otsikko: str, avain: str):
             tiedosto = st.file_uploader(
                 f"{otsikko} – tiedosto",
                 type=["xml"],
-                key=f"{avain}_tiedosto",
+                key=f"{key}_tiedosto",
                 label_visibility="collapsed",
             )
             if tiedosto is not None:
@@ -227,12 +227,12 @@ def xml_syote(otsikko: str, avain: str):
             teksti = st.text_area(
                 f"{otsikko} – teksti",
                 height=200,
-                placeholder="Liitä XML tähän (Ctrl+V). Vahvista tarvittaessa Ctrl+Enter.",
-                key=f"{avain}_teksti",
+                placeholder="Liitä XML tähän (Ctrl+V).",
+                key=f"{key}_teksti",
                 label_visibility="collapsed",
             )
             if teksti.strip():
-                return teksti.encode("utf-8"), f"liitetty teksti ({avain})"
+                return teksti.encode("utf-8"), f"liitetty teksti ({key})"
 
     return None, None
 
@@ -341,7 +341,7 @@ def rivitysvalinta():
     else:
         tyyli = (
             "white-space: pre !important; overflow-wrap: normal !important; "
-            "overflow-x: auto !important;"
+            "overflow-x: scroll !important;"
         )
 
     st.markdown(
@@ -436,9 +436,9 @@ def main():
         </span>
     </div>
     """
-    st.markdown(footer_html, unsafe_allow_html=True)
+    st.markdown(f"""<h1 style=\"text-align: center;\">SOSH Kanta validointityökalu 3.1</h1>{footer_html}""", unsafe_allow_html=True)
 
-    st.title("SOSH Kanta validointityökalu 3.1")
+    # st.title("SOSH Kanta validointityökalu 3.1")
     
     st.divider()
         
@@ -482,7 +482,7 @@ def main():
 
         # Jos löytyi ei-testitunnuksia, näytetään virheilmoitus ja lopetetaan validointi
         if kaikki_muut_hetus:
-            st.error("⛔ PYSÄYTETTY: Tiedostoista löytyi henkilötunnuksia, jotka eivät ole testitunnuksia!**")
+            st.error("⛔ PYSÄYTETTY: Tiedostoista löytyi henkilötunnuksia, jotka eivät ole **testitunnuksia!**")
             st.warning(f"Seuraavat henkilötunnukset eivät ole testitunnuksia: **{', '.join(kaikki_muut_hetus)}**")
             st.info("Varmista tietosuoja ennen pyynnön lähettämistä eteenpäin.")
             return

@@ -1,0 +1,232 @@
+<ClinicalDocument xmlns="urn:hl7-org:v3" xsi:schemaLocation="urn:hl7-org:v3 ../../cda/CDA_Fi_sos.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<!-- Liitetään yhteisen kehyksen osuus asiakirjalle -->
+	<realmCode code="FI"/>
+	<typeId extension="POCD_HD000040" root="2.16.840.1.113883.1.3"/>
+	<!-- Asiakirjan tunniste -->
+	<id root="1.2.246.10.2012566.95.2026.688883.2655274"/>
+	<!-- Yleinen asiakirjatyyppi -->
+	<code code="15" codeSystem="1.2.246.537.6.1506.201701" codeSystemName="Sosiaalihuolto - Asiakasasiakirjatyyppi" displayName="Suunnitelma"/>
+	<!-- Asiakirjan laatimisaika -->
+	<effectiveTime value="20260323105424+0200"/>
+	<!-- Asiakastietojen luottamuksellisuusluokka -->
+	<confidentialityCode code="6" codeSystem="1.2.246.777.5.99902.2006" codeSystemName="KanTa-palvelut - Asiakirjan luottamuksellisuus" displayName="Sosiaalihuollon salassapidettävä"/>
+	<!-- Asiakirjan kieli -->
+	<languageCode code="FI"/>
+	<!-- Alkuperäisen asiakirjan tunniste - pysyy samana, vaikka asiakirja korvattaisiin toisella -->
+	<setId root="1.2.246.10.2012566.95.2026.688883.2655274"/>
+	<!-- Asiakirjan versio -->
+	<versionNumber value="1"/>
+	<!-- Asiakkaan tiedot -->
+	<recordTarget>
+		<patientRole>
+			<id root="1.2.246.21" extension="180418A903L"/>
+			<patient>
+				<name>
+					<given>Kanta-Hakuat</given>
+					<given qualifier="CL">Kanta-Hakuat</given>
+					<family>Sosh-Aik</family>
+				</name>
+				<administrativeGenderCode code="1" codeSystem="1.2.246.537.5.1.1997" codeSystemName="AR/YDIN - Sukupuoli" displayName="Mies"/>
+				<birthTime value="20180418"/>
+			</patient>
+		</patientRole>
+	</recordTarget>
+	<!-- Sosiaalihuollon ammattihenkilön tiedot -->
+	<author>
+		<time nullFlavor="NA"/>
+		<assignedAuthor>
+			<!-- Ammattihenkilön rekisteröintinumero -->
+			<id root="1.2.246.537.26" extension="25104559650"/>
+			<assignedPerson>
+				<!-- Ammattihenkilön nimi -->
+				<name>
+					<given>Angelica</given>
+					<family>Johansson</family>
+				</name>
+			</assignedPerson>
+		</assignedAuthor>
+	</author>
+	<!-- Rekisterinpitäjän tiedot -->
+	<custodian>
+		<assignedCustodian>
+			<representedCustodianOrganization>
+				<id root="1.2.246.10.2012566.10.40"/>
+				<name>Helsingin sosiaali- ja terveystoimi</name>
+			</representedCustodianOrganization>
+		</assignedCustodian>
+	</custodian>
+	<!-- Asiakastietojen luovuttaminen huoltajille -->
+	<authorization>
+		<consent>
+			<code code="1" codeSystem="1.2.246.537.6.1286.201901" codeSystemName="Sosiaalihuolto - Alaikäisen asiakastietojen luovuttaminen huoltajille" displayName="Alaikäisen asiakkaan asiakirja voidaan luovuttaa huoltajille ja muille tiedonsaantiin oikeutetuille, koska alaikäinen ei kiellä asiakirjan luovuttamista"/>
+			<statusCode code="completed"/>
+		</consent>
+	</authorization>
+	<!-- Asiakirjaan liittyvän asian tiedot-->
+	<componentOf>
+		<encompassingEncounter>
+			<!-- Asia-tunnus -->
+			<id root="1.2.246.10.2012566.95.2026.778465.646" nullFlavor="NA"/>
+			<!-- Asian avaus- ja päättymispäivät - ei käytetä asiakasasiakirjassa, mutta HL7 CDA vaatii -->
+			<effectiveTime nullFlavor="NA"/>
+			<responsibleParty>
+				<assignedEntity>
+					<id nullFlavor="NA"/>
+					<representedOrganization>
+						<id root="1.2.246.10.2012566.10.40"/>
+						<name>Helsingin sosiaali- ja terveystoimi</name>
+					</representedOrganization>
+				</assignedEntity>
+			</responsibleParty>
+			<encounterParticipant typeCode="ADM">
+				<assignedEntity>
+					<id nullFlavor="NA"/>
+					<representedOrganization>
+						<id root="1.2.246.10.2012566.10.40006775"/>
+						<name>Lapsiperheiden sosiaaliohjaus Vuosaaren perhekeskus 1, Helsingin sotepe</name>
+					</representedOrganization>
+				</assignedEntity>
+			</encounterParticipant>
+		</encompassingEncounter>
+	</componentOf>
+	<ep2:localSocialHeader xmlns:ep2="urn:hl7finland">
+		<!-- Asiakirjan tarkennettu asiakirjatyyppi -->
+		<ep2:specificDocumentType code="15007" codeSystem="1.2.246.537.6.1506.201701" codeSystemName="Sosiaalihuolto - Asiakasasiakirjatyyppi" displayName="Lapsiperheiden palvelujen asiakassuunnitelma"/>
+		<!-- Asiakirjan luontiaika -->
+		<ep2:creationTime value="20260323105424+0200"/>
+		<!-- Asiakirjaryhmä -->
+		<ep2:documentGroup code="5" codeSystem="1.2.246.537.6.1505.201601" codeSystemName="Sosiaalihuolto - Asiakirjaryhmä" displayName="Toisen tai myöhemmän vaiheen asiakasasiakirja"/>
+		<!--Näyttömuodon formaatti-->
+		<!--Jos EI löydy liitettä -->
+		<!-- EI PDF-pääasiakirjaa-->
+		<!--Näyttömuoto XHTML,jos asiakirja-->
+		<ep2:fileFormat code="2" codeSystem="1.2.246.537.6.1502.201601" codeSystemName="Sosiaalihuolto - Asiakirjan näyttömuodon formaatti" displayName="XHTML_1.1"/>
+		<!--Rakenteisen muodon formaatti JSON-->
+		<ep2:structuredFileFormat code="5" codeSystem="1.2.246.537.5.40179.2008" codeSystemName="eArkisto - Asiakirjan tiedostomuoto" displayName="JSON"/>
+		<!-- Asiakirjan ohjelmistoympäristö -->
+		<ep2:softwareSupport moderator="Epic Systems Corporation" product="Apotti" version="11.7.0"/>
+		<!-- Sosiaalihuollon Palvelutehtävä -->
+		<ep2:functionCode code="24" displayName="Lapsiperheiden palvelut" codeSystemName="Sosiaalihuolto - Palvelutehtävä" codeSystem="1.2.246.537.6.1221.201601"/>
+		<!-- Asiakirjan (valmistumisen) tila -->
+		<ep2:recordStatus code="3" displayName="Arkistointivalmis" codeSystemName="eArkisto - Asiakirjan valmistumisen tila" codeSystem="1.2.246.537.5.40154.2008"/>
+		<!-- Rekisterityyppi -->
+		<ep2:registryType code="1" codeSystem="1.2.246.537.6.1264.201701" codeSystemName="Sosiaalihuolto - Asiakirjan rekisteritunnus" displayName="Sosiaalihuollon asiakasrekisteri"/>
+		<!-- Palvelunjärjestäjän organisaatiokoodi -->
+		<ep2:outsourcingServiceCustomer root="1.2.246.10.2012566.10.40"/>
+		<!-- Palvelunjärjestäjän nimi -->
+		<ep2:outsourcingServiceCustomerName>Helsingin sosiaali- ja terveystoimi</ep2:outsourcingServiceCustomerName>
+		<!-- Asiakastietojen kokonaissäilytysaika -->
+		<ep2:totalRetentionPeriodClass code="1" codeSystem="1.2.246.537.6.1258.201601" codeSystemName="Sosiaalihuolto - asiakirjan kokonaissäilytysaika" displayName="Säilytetään pysyvästi"/>
+		<!-- Erityissisältö -->
+		<ep2:specialContent code="K" codeSystem="1.2.246.537.6.112.2007" codeSystemName="AR/YDIN - Kyllä/EI/Ei tietoa" displayName="Kyllä"/>
+		<!-- Asiakirjan teknisessä toteutuksessa noudatettu määritys (asiakirjan rakenteessa noudatettu sisältömääritys) -->
+		<ep2:contentSpecificationId>1.2.246.537.6.1506.15007.2024.11.28</ep2:contentSpecificationId>
+		<!-- Palveluprosessin (toimenpiteen) tiedot -->
+		<ep2:serviceProcess>
+			<!-- Toimenpiteen tyyppi, skeemalla fixed="Sosiaalihuollon palveluprosessi" -->
+			<ep2:type>Sosiaalihuollon palveluprosessi</ep2:type>
+			<!-- Palveluprosessin nimike -->
+			<!-- Rekisteri-lomakkeelle täyttyy tietyissä tilanteissa palveluprosessin vaihe automaattisesti ja muuten se tulee valita manuaalisesti, sen vuoksi seuraava rakenne -->
+			<ep2:code code="3" displayName="Asiakkuuden suunnittelu" codeSystem="1.2.246.537.6.1277.201701" codeSystemName="Sosiaalihuolto - Sosiaalihuollon palveluprosessi"/>
+		</ep2:serviceProcess>
+		<!-- Perustelut alaikäisen pyynnölle, että tietoja ei luovuteta huoltajalle tai tekstimuotoinen perustelu asiakirjan viivästämiselle tai näyttämättä jättämiselle, jossa voidaan tarkentaa luokituksesta valittua luokkaa ja antaa siihen lisätietoja. -->
+		<ep2:authorizationRestrictionArgument>Viivästys 1</ep2:authorizationRestrictionArgument>
+		<!-- Perustelut asiakirjan viivästämiselle tai näyttämättä jättämiselle -->
+		<ep2:inaccessibleArgument code="1" codeSystem="1.2.246.537.6.1288.201901" codeSystemName="Sosiaalihuolto - Perustelut asiakirjan näyttämisen rajaamiselle Omakannassa" displayName="Asiakirjan näyttämisestä aiheutuu vaaraa asiakkaan terveydelle tai kehitykselle"/>
+		<!-- Asiakirjan korvauksen syy. Tämä on tilapäinen ratkaisu. -->
+		<!-- Alla on alkuperäinen ratkaisu Asiakirjan korvauksen syy. -->
+		<!-- <#case $d(data("reasonOfCorrectionCode"))> -->
+		<!-- Asiakirjan korvauksen syy -->
+		<!--	<hl7fi:reasonOfCorrection code=data("reasonOfCorrectionCode") codeSystem=data("reasonOfCorrectionSystem") codeSystemName=data("reasonOfCorrectionSystemName") displayName=data("reasonOfCorrectionDisplayName") /> -->
+		<!--</#case> -->
+		<!-- Asiakirjan sähköisen allekirjoituksen tiedot, jos ammattihenkilön allekirjoitus -->
+		<ep2:signature>
+			<!-- Ammattihenkilön DVV-kortin numero samalla logiikalla kuin muutkin tiedot, Uses Last User to update RDI Status, fall back to the logged in user (such as for initial contact) -->
+			<ep2:assignedAuthorSigner>25104559650</ep2:assignedAuthorSigner>
+			<!-- Allekirjoittajan nimi -->
+			<ep2:signer>
+				<ep2:name>
+					<ep2:given>Angelica</ep2:given>
+					<ep2:family>Johansson</ep2:family>
+				</ep2:name>
+			</ep2:signer>
+			<!-- Tunnistautumistapa -->
+			<ep2:authenticationMethod code="1" codeSystem="1.2.246.537.5.40128.2006" codeSystemName="KanTa-palvelut - Tunnistautumistapa" displayName="Sosiaali- ja terveydenhuollon ammattihenkilön varmenne"/>
+			<!-- Allekirjoituksen aikaleima -->
+			<ep2:time value="20260323105425+0200"/>
+		</ep2:signature>
+		<signatureCollection xmlns="urn:hl7finland">
+			<signature ID="sig_5bada148-2695-11f1-849f-005056805429" xmlns="urn:hl7finland">
+				<signatureDescription code="1" displayName="Ammattihenkilön allekirjoitus" codeSystem="1.2.246.537.5.40127.2006" codeSystemName="KanTa-palvelut - Sähköisen allekirjoituksen tyyppi"/>
+				<signatureTimestamp ID="CDA-timestamp.sig_5bada148-2695-11f1-849f-005056805429">2026-03-23T08:50:35.5590148Z</signatureTimestamp>
+				<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+					<SignedInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+						<CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+						<SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+						<Reference URI="#OID1.2.246.10.2012566.95.2026.688883.2655274">
+							<Transforms>
+								<Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+							</Transforms>
+							<DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+							<DigestValue>fpAS9OnPE8Bm1nSQlvdBlML1tgsGFAxVIVgCOA6HpT4=</DigestValue>
+						</Reference>
+						<Reference URI="#CDA-timestamp.sig_5bada148-2695-11f1-849f-005056805429">
+							<Transforms>
+								<Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+							</Transforms>
+							<DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+							<DigestValue>NnZ7vds+vOW9MgUtv95DNp/pg4nyS6SeNsNXDe56AKQ=</DigestValue>
+						</Reference>
+					</SignedInfo>
+					<SignatureValue>Q6ue0QXBYuXvx96c4sOWPHOYh04PfG7dS9lQW4fsi4s/tdV6bt1YTT4EdSWVeB4rA2PTpRKr7U3PvIZztTToU4YAq97tp5+NzuHXaGnV7KXs8WFEiZwkCIn5hyoePwhK2qVmuSypGRrMpIH5waS9Z0jyCsefGz7WHblcvFtfrYOkynvtvVlP2FlBZ9kQGgjLHGAjcEM5ZTjDeYrAQ09TP72oqCrgjGnNm7oFJYu32mTcaVhoT528UQdNG5al+nBIzc4Qlw2HVWz8KQx0X+QfbIe/P5C8CxSlEyl0+JS+dhyvt2pHjtA7NX/1eRn/yn+FQYSK2Q9TTFwSDIM/pTWMWVpXPsynKsgJ1GDxK2r11b9LxZGdl94peFQ+xQkXo3uCXIclw4FpxCiKAi2LpU1Snj05/a6qB5aOSVNeDCvzsF7Nr6XFDp1dM5zGVO+rVY/Ze/m3SYEcWT+4Xsf8AVR2DdG1Mquu/TMBQ32DKdx9Uefkxiqim/I1voI2OzBBiFKF</SignatureValue>
+					<KeyInfo>
+						<X509Data>
+							<X509Certificate>MIIHVDCCBTygAwIBAgIEEijgxjANBgkqhkiG9w0BAQ0FADCBujELMAkGA1UEBhMCRkkxKTAnBgNVBAoMIERpZ2ktIGphIHZhZXN0b3RpZXRvdmlyYXN0byBURVNUMT0wOwYDVQQLDDRTb3NpYWFsaS0gamEgdGVydmV5ZGVuaHVvbGxvbiB0ZXN0aWFtbWF0dGl2YXJtZW50ZWV0MUEwPwYDVQQDDDhEVlYgVEVTVCBTb2NpYWwgV2VsZmFyZSBhbmQgSGVhbHRoY2FyZSBQcm9mLiBDZXJ0cyAtIEcyUjAeFw0yNTA2MjYwNDUzNTJaFw0zMDA2MjcyMzU5NTlaMIGVMQswCQYDVQQGEwJGSTEgMB4GA1UEDAwXMjUxIHNvc2lvbm9taSwgc29jaW9ub20xFDASBgNVBAUTCzI1MTA0NTU5NjUwMREwDwYDVQQqDAhBbmdlbGljYTESMBAGA1UEBAwJSm9oYW5zc29uMScwJQYDVQQDDB5Kb2hhbnNzb24gQW5nZWxpY2EgMjUxMDQ1NTk2NTAwggGiMA0GCSqGSIb3DQEBAQUAA4IBjwAwggGKAoIBgQCzWe79zGS+AC3dwBj53JiE2s7WppgRrS+uXLHCSqzJRMVoQD1IVv8mVKr7Mkibj9PQpeZmU0oC6oJX6GofGG1a8jWZgKstrHP7lBm+ca8tN0BoG1xIZ2SLtggcaBOSe9VaSuPDowdpUJ5UiF3LZRGnPvtq51gH87PWK0GTWDWdIbcESs8HyrjqolikvVjsVN41HUkgNX2Aih8c3UNhI+1HCCf04s5i7dl3c8W/inXHrjSwBn92q9jW6qpr19RRknBFjbTlydHSjw6t37Fm6fryS6ZLWig3T/B+bhtObyXMAlASyJ3XHK//Uv2UoSlgeQkMTW08JMFcyy4op3aPoakrGyzxK8kLg1hfO/QDb/XOAbDkqtdq/Op6vFtxBjrt7MDxROrb6GDDBsukF45/Iqp+EySuEvGY/UiyDOPaSnblzxSK76tI35mqZW5nQ1I0qWqlhTguqSK5+dfu7VLqgdLCLU03bHEa+BNDnEly9dt7skPVs4SUWP+k4Exs4UY3NSsCAwEAAaOCAgMwggH/MB8GA1UdIwQYMBaAFG9rSjtK2tQroThSzJDOCVGGPh9zMB0GA1UdDgQWBBQoKZxhrCmrpxs7E3Mk9iK9BeFoezAOBgNVHQ8BAf8EBAMCBkAwgc0GA1UdIASBxTCBwjCBvwYKKoF2hAVjCoIyATCBsDAnBggrBgEFBQcCARYbaHR0cDovL3d3dy5maW5laWQuZmkvY3BzOTkvMIGEBggrBgEFBQcCAjB4GnZWYXJtZW5uZXBvbGl0aWlra2Egb24gc2FhdGF2aWxsYSAtIENlcnRpZmlrYXRwb2xpY3kgZmlubnMgLSBDZXJ0aWZpY2F0ZSBwb2xpY3kgaXMgYXZhaWxhYmxlIGh0dHA6Ly93d3cuZmluZWlkLmZpL2Nwczk5MA8GA1UdEwEB/wQFMAMBAQAwOgYDVR0fBDMwMTAvoC2gK4YpaHR0cDovL3Byb3h5LmZpbmVpZC5maS9jcmwvZHZ2dHNocDJyYy5jcmwwdgYIKwYBBQUHAQEEajBoMDQGCCsGAQUFBzAChihodHRwOi8vcHJveHkuZmluZWlkLmZpL2NhL2R2dnRzaHAycmMuY3J0MDAGCCsGAQUFBzABhiRodHRwOi8vb2NzcHRlc3QuZmluZWlkLmZpL2R2dnRzaHAycmMwGAYIKwYBBQUHAQMEDDAKMAgGBgQAjkYBBDANBgkqhkiG9w0BAQ0FAAOCAgEAQoQYYfhMW84ATWqaagayWVILTbfeC191cn6eiAbazMIYHttR8vAK1RbtkqbCKk/dmDMCDtI6H9xfAGDDMq3Qu9mFoswsk8VWepPDsOiLaCvOpq/y7a1fkg9+gJ8Lxn/xYYIR3DVAwAs1cV2O5l/nrbicatDl1RYDSV4zhSVmmzBdVvS7+9J3ssbHOiS1+6OFtbWoM9+WyT49gJX4jTXu3uh0k3PDhOHWwGi/yR4xXeHiyR955V5Qg7xg9imTTttsXtStzDv0kPQALa/yTua9feFeZDzH6zznGx5rrC9pqku7daMqLkhQABYrmnvHT2caRRe6c940lvzKmTyeSJ8tZt6aaKwfVe8e0ckDWYQuTeGo9OxY3iiQeRbjn4cZwToLXra+gv6zZDBkaBRjkcn0SoZEoYyXGJXx2+/Y5AY805b5gZS2JeffPyojbha7yDlme2O602cVdc3GCVxF0Ph8FF+B2Ual+us1u+jWBlZMR+PflZlvZVkNBMWMC6DVe0f1yCsMHeCSiv7EJ+kLVVnaScXQkGC7ILa89E84IIAkbA9zn9ghML9dnZHhy2KnDe/6LPBK5Vgmj/kOXmbX0J0E+7y4H1ttDv+hSsmsyU9Shk2H2hcmewh280RPkcjnTidDeS/Cxy31HVsSiQhe4VPvD0ow752QQ+rVFTVBDhFuz6o=</X509Certificate>
+						</X509Data>
+					</KeyInfo>
+				</Signature>
+			</signature>
+			<signature ID="sig_e513809e-2695-11f1-849f-005056805429" xmlns="urn:hl7finland">
+				<signatureDescription code="1" displayName="Ammattihenkilön allekirjoitus" codeSystem="1.2.246.537.5.40127.2006" codeSystemName="KanTa-palvelut - Sähköisen allekirjoituksen tyyppi"/>
+				<signatureTimestamp ID="CDA-timestamp.sig_e513809e-2695-11f1-849f-005056805429">2026-03-23T08:54:26.076175Z</signatureTimestamp>
+				<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+					<SignedInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+						<CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+						<SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+						<Reference URI="#OID1.2.246.10.2012566.95.2026.688883.2655274">
+							<Transforms>
+								<Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+							</Transforms>
+							<DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+							<DigestValue>fpAS9OnPE8Bm1nSQlvdBlML1tgsGFAxVIVgCOA6HpT4=</DigestValue>
+						</Reference>
+						<Reference URI="#CDA-timestamp.sig_e513809e-2695-11f1-849f-005056805429">
+							<Transforms>
+								<Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+							</Transforms>
+							<DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+							<DigestValue>WOBuWp61oTXxv30vlHp0DMYIYv1966In7zwx5m5QcOU=</DigestValue>
+						</Reference>
+					</SignedInfo>
+					<SignatureValue>DAUWEp2s3WI26SNbDfLBFV7S3V4F8FF0CmR/i7RZWb96Csvq1FG7wR3rk/NABtUtOAq2i7yE6R75wHaqcjBNLL0PCx9mHihizpzF2NmWji9nbHEz8tDR+S5aZCxgHzPwJILkjRoMpnfsSDpSus3/YRCHsvQotEzs62JhC7c8AHVOR84kg6T3wIeOqU3qkMxFzuUkr+b/9RF1eL3VV8YIMZY703XgyhlyN+aYx0s4gtkxTOUBMaHJMkZAUj4Adr4I0wik/h1MtRqlbpq3IYIUBGPuJq/he4acwIK125y4LrgBDnncGFcpTT9rM9GGI6XZqU+LZrLOCvOewY+Ek75d901TsxL1NEntHAaF5eL+xnytU5StA6B5ukGCEHR6Nzmd8ogdmdYDdoNPFJ58NCzBrVFXw/mZjMWAdzeR9o3P5okoGbvRzKTmxvG0oqJ/aYwVJtaQR3wa2F/NUOB75C84G9S5hWr0aV+218GSMTAtQY6f+073/qN8aiztKTUP2TSn</SignatureValue>
+					<KeyInfo>
+						<X509Data>
+							<X509Certificate>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</X509Certificate>
+						</X509Data>
+					</KeyInfo>
+				</Signature>
+			</signature>
+		</signatureCollection>
+	</ep2:localSocialHeader>
+	<component>
+		<!-- Haetaan asiakirjan OID -->
+		<nonXMLBody ID="OID1.2.246.10.2012566.95.2026.688883.2655274">
+			<!-- Liitettä ei löydy -->
+			<!-- Kyseessä ei ole mitätöinti, Arkistoidaan asiakirja -->
+			<text mediaType="application/xhtml+xml" representation="B64">
+				<!-- Liitetään asiakirjan näyttömuoto -->PGRpdiBjbGFzcz0ic29jLWRvY3VtZW50IiBpZD0iT0lEMS4yLjI0Ni4xMC4yMDEyNTY2Ljk1LjIwMjYuNjg4ODgzLjI2NTUyNzQiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hodG1sIj48IS0tIFlsw6R0dW5uaXN0ZSAjaW5jbHVkZWxsYSAvU09TTUVUQS9OQVJSQVRJVkUgSEVBREVSLnhtbHQgLS0+PGRpdiBjbGFzcz0ic29jLWhlYWRlciI+DQo8ZGl2IGNsYXNzPSJzb2MtbG9nbyI+DQo8IS0tIEhFTCBsb2dvIC0tPiAJPGltZyBzcmM9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRllBQUFBb0NBWUFBQUJrZmcxR0FBQUFBWE5TUjBJQXJzNGM2UUFBQUFSblFVMUJBQUN4and2OFlRVUFBQUFKY0VoWmN3QUFFblFBQUJKMEFkNW1IM2dBQUFiaVNVUkJWR2hEN1pwNVNCVmZGTWVQTDdORld6Q3l0TFNGbmhIMVIycUxHbVdsYmFZVVpVV1FVQVQ5SVNGRVZGU1dXclQrVVNha0xSWVZHQ1ZpcFpXMEtCRllwS1ZTUk5IbVFsRFNRdHBtbTlQOUh1KzgzdUt6OTU3djJmdjltQStNTTNQdW5UY3ozemx6enIxbjlQRHo4MU5JdytubzVGckR5Umc4ZHNxVUtSUVJFY0ZHRGNlNGZmczIzYng1czNVSHdtTFp2Mysvb3RFeG9LR3FweFlLWElRbXJJdlFoSFVSbXJBdVFoUFdSV2pDdWdoTldCZmhGc0xldUhHRExsMjZSSThlUFpJVzIvanc0UU9kTzNlT0dob2FwTVYyQ2dvSzZPVEprMVJaV1NrdGxqUTNOMU5oWVNHOWVQRkNXdXpBM2duQ2dnVUxsQWtUSmlqcDZlblM4b2ZWcTFkejI2cFZxNlRGTnNTTWo2OGhOVFZWV214anlaSWxmTnkwYWRPa3hYWW1UcHpJeCs3WXNVTmFMTm04ZVRQMzBldjFpaEJaV3EzVG9RbkN5NWN2cWJhMmx0NjlleWN0ZjREbm9NMFJEM0tFN3QyN202eWRqZnE3WGw1ZTVPSGh3ZHUyOHArT3NkbloyWFQyN0ZrNmMrYU10RGlYalJzM1VuNStQcFdVbExDNDl0QXB3bDY4ZUpFV0xseElZV0ZoTkdmT0hEcHg0Z1NKTjBlMld1ZmF0V3UwZVBGaVBtNzY5T21VbHBaR3IxKy9scTNFTVJLL2xaV1ZKUzFFSWtUUjh1WEw2ZlRwMDNUcTFDbWFPblVxVFpvMGlUSXpNOXM5NTdkdjN5ZzVPWm1QeFcrZ2IxRlJFUjA3ZG94Mjdkb2xlOW1PcDF6YnpaczNiNmk4dkZ6dXRkTFUxQ1MzL25EdzRFSGF0bTBidjBxQmdZRjAvLzU5VGhqUG56K243ZHUzeTE2V0ZCY1gwNG9WSy9nR0J3NGN5QW5rNGNPSDdKM3dvakZqeGxCMWRUWDNhMnhzbEVjUjNicDFpKzAxTlRYMCtQRmphU1VTc1pTQ2dvSm8vdno1MG1MSzFxMWIyZnY3OXUxTEtTa3BmTDNQbmozajN4Y3hVL2F5SFljOUZxOUhmSHk4eVZKVlZTVmJXNEYzN2Q2OW03ZVBIejlPRlJVVmRPSENCZExwZEpTVGs4UHgyaHJJMmhCMTh1VEpMQlFleHFoUm83aTgyYWRQSDluTE9xOWV2YUs4dkR3K1grL2V2ZGtHa2N5QmdNajg4UHl1WGJ2eWRZMFlNVUsyT283RHdrSWN4QjNqQlRaak1JejYvdjA3ZThISGp4L1pJK0NwdnI2KzFOTFNRbmZ2M3BVOUxSa3laQWl2eThyS0tERXhrYzZmUDA5SGp4NmxJMGVPc09mL2pkbXpaMU5VVkJTRmg0Y2I2c3p2MzcvbnRUR2ZQbjJpZGV2VzhUWmlLaDZrTTNCWTJFV0xGbEY5ZmIzSlluNVI2dWdBNDAzRUwzVjUrL1l0MjMvKy9NbnJ0bGl6Wm8zaHRVV3N4VTNEVzlldlg5L3VjU285ZXZTUVcwVGR1bldUVzVZZ0Z1UDZBQjZpczNCWVdMeEM1b3M1OEZRQTc4TUVRRjN3ZW1JOVk4WU1ibThMYjI5dlRsYW95dS9jdVpNZkdyd2NDU3MzTjFmMjZqaGZ2bnloOGVQSDh6YkMyK1hMbDNtN296Z3NyQzBnRzBOd3hGSlBUMDhhTjI0Y0RSczJqTmF1WGN0eHMyZlBudHhQZlNpNFNRQ1AzTHQzTDcvQzE2OWZwNVVyVjNMQ0NnNE81dmE2dWpwZU80T1FrQkNPNTdObXplTDlMVnUyR0s2akk3aFVXQ1NCWmN1VzBhOWZ2Mmpldkhra1ptMzhPaVBiSGo1OG1ENS8vc3o5QmcwYXhHdGtmTnpnZ3djUE9CWi8vZnFWeE95SFpzNmNTWFBuenFVblQ1N3dRNGlKaWVIK3pnQnZBdklEUmcwSUgzQ0NmZnYyeVZiSHNWdllvVU9Ic21CdERVRWdFTnBVb1FCR0JSczJiT0N3Z0JnR3NSQ2ZNYlpWUXdYYTRjbElkSmpSWVZpRXNTbHVGaU1CQ0gzdjNqMGFPWElrSjYvSXlFZytic0NBQVJiblEyS0RyWC8vL3RKQ1BGeURMU0FnUUZwYXd4TnMvZnIxNDMwY3QyblRKclloSkNBL0lNbGlIOWRtTityY3RqTStKZ3BSRlJFbjVaNGwxdHArL1BpaGlBRzgzSE5mVEdvRmFud1RkbDY3RXN5OTIwcHlLdGJhRUoveHVybzd4aHJxa0gyQk91VFFjQnhWUXg4Zkg5S3A4UU54VEtOanFCb09IejZjZEdvaXdMeS9zOHA5LzBjd2ZiOXo1dzV2UTFNZHFrNUFKQWc2Y09BQWIydllUMFpHaG1GR3lKb2ltNm1WZURFc1VVcExTMkhTc0lPclY2OHFZdWpIR2k1ZHVwUnRMS3dZakNzaTFuSUQxbUsydzQwYWY2ZTR1RmdSWTJMV1RzUldwYWFtaHUwc0xCQnpaRVVNb0EyZUs2YWRTbjE5dld6Vk1BY0NKaWNuR3p4VlRGTFljMVU4OEljRGcrREtsU3VVbEpURXBUU0FNdURZc1dOcDlPalJYQU50Ynd6cURMcDA2Y0t6SGRRRVVGZm8xYXVYYkdrYmxDSlI0MzM2OUNtWEJERjFkaVdRQ2tNcVpIOFU3RlhwVU84OWRPZ1FSVWRIOHo0d0VSYWd3SUZDaEZEZmNPQy9BQk1DVkwvd29DR3lNYWpqWXNxTGEwVFMvVmZBMFdKalkva0x5ZURCZzZXMUZRdGhWZkJaQTFVZmxPM3c1UlVGRTFjTGpiSWd2ajJabnljaElZRkxod0R6ZVZTNmpNRU5vdVpxWG1oM05qZ1BCdjhZcDZMeWhxS1NYcStYcmFaWUZmWmZnRXZCOXl0OGhzR0hQRHhZL05NRXdNMEE5WjhuTUQzR3NDWXVMbzVDUTBNN0pWVFpnMXNKYXc2K1c2SHloZGh2REVxTGUvYnNJWDkvZjJseFF5Q3NPNE9LRi81YkJaa1hpd2dKN1ZiSTNBVzM5bGhqOEVVQjRKdVgrMFAwRzdCNVpxZkJUNnJsQUFBQUFFbEZUa1N1UW1DQyIgYWx0PSJIZWxzaW5naW4ga2F1cHVuZ2luIGxvZ28iLz4NCg0KPC9kaXY+DQo8ZGl2IGNsYXNzPSJzb2MtaGRyMSI+SGVsc2luZ2luIHNvc2lhYWxpLSBqYSB0ZXJ2ZXlzdG9pbWk8L2Rpdj4gPCEtLSBPcmdhbmlzYWF0aW9uIG5pbWkgLS0+DQo8ZGl2IGNsYXNzPSJzb2MtaGRyMiI+U3V1bm5pdGVsbWE8L2Rpdj4gPCEtLSBZbGVpbmVuIGFzaWFraXJqYXR5eXBwaSAtLT4NCjxkaXYgY2xhc3M9InNvYy1oZHIzIj48L2Rpdj4gPCEtLSBQw6RpdsOkbcOkw6Ryw6QsIGt5c3kgRXBpYyBEWFMgY29udGFjdCAtLT4NCjwvZGl2PjwhLS0gVmFyc2luYWlzZW4gYXNpYWtpcmphIHNpc8OkbHTDtiAtLT48ZGl2IGNsYXNzPSJzb2MtbWFpbi13cmFwcGVyIj48aDEgY2xhc3M9InNvYy1mdWxsdGl0bGUiPkxhcHNpcGVyaGVpZGVuIHBhbHZlbHVqZW4gYXNpYWthc3N1dW5uaXRlbG1hPC9oMT4gPCEtLSBQaXRrw6Qgb3RzaWtrbyAtLT48ZGl2IGNsYXNzPSJzb2MtbGlzdCI+PGRpdiBjbGFzcz0ic29jLWl0ZW0iPjxoMSBjbGFzcz0ic29jLXRpdGxlIj5Bc2lha2FzPC9oMT48ZGl2IGNsYXNzPSJzb2MtY29udGVudCI+PHA+U29zaC1BaWssIEthbnRhLUhha3VhdDxici8+MTgwNDE4KioqKio8L3A+PC9kaXY+PC9kaXY+PC9kaXY+PGRpdiBjbGFzcz0ic29jLWxpc3QiPjxkaXYgY2xhc3M9InNvYy1pdGVtIj48aDEgY2xhc3M9InNvYy10aXRsZSI+S3V2YXVzIGFzaWFra2FhbiB0aWxhbnRlZXN0YTwvaDE+PGRpdiBjbGFzcz0ic29jLWNvbnRlbnQiPjxwPmFhc2Rhc2Q8L3A+PC9kaXY+PC9kaXY+PC9kaXY+PGRpdiBjbGFzcz0ic29jLWxpc3QiPjxkaXYgY2xhc3M9InNvYy1pdGVtIj48aDEgY2xhc3M9InNvYy10aXRsZSI+RWRlbGxpc2VuIHN1dW5uaXRlbG1hbiB0YXZvaXR0ZWlkZW4gc2FhdnV0dGFtaW5lbjwvaDE+PGRpdiBjbGFzcz0ic29jLWNvbnRlbnQiPjxwPkFydmlvOiBUYXZvaXRlIHRhaSB0YXZvaXR0ZWV0IG9uIHNhYXZ1dGV0dHUga29rb25hYW48YnIvPlNhbmFsbGluZW4gYXJ2aW86IGFzZDxici8+PC9wPjwvZGl2PjwvZGl2PjwvZGl2PjxkaXYgY2xhc3M9InNvYy1saXN0Ij48ZGl2IGNsYXNzPSJzb2MtaXRlbSI+PGgxIGNsYXNzPSJzb2MtdGl0bGUiPlBhbHZlbHV0IGpvaXRhIGFzaWFra2FhbGxlIHN1dW5uaXRlbGxhYW48L2gxPjxkaXYgY2xhc3M9InNvYy1jb250ZW50Ij48cD5TdXVubml0ZWx0YXZhIHNvc2lhYWxpcGFsdmVsdTogU29zaWFhbGlvaGphdXM8YnIvPjwvcD48L2Rpdj48L2Rpdj48L2Rpdj48ZGl2IGNsYXNzPSJzb2MtbGlzdCI+PGRpdiBjbGFzcz0ic29jLWl0ZW0iPjxoMSBjbGFzcz0ic29jLXRpdGxlIj5TdXVubml0ZWxtYSBhc2lha2thYW4gamEgb21hdHnDtm50ZWtpasOkbiB0YXBhYW1pc2lzdGE8L2gxPjxkaXYgY2xhc3M9InNvYy1jb250ZW50Ij48cD5hc2RhPC9wPjwvZGl2PjwvZGl2PjwvZGl2PjxkaXYgY2xhc3M9InNvYy1saXN0Ij48ZGl2IGNsYXNzPSJzb2MtaXRlbSI+PGgxIGNsYXNzPSJzb2MtdGl0bGUiPkFzaWFra2FhbGxlIG9uIGFubmV0dHUgc2Vsdml0eXMgb2lrZXVrc2lzdGEsIHZlbHZvbGxpc3V1a3Npc3RhIGphIGVyaWxhaXNpc3RhIHRpbGFudGVlc2VlbiBzb3BpdmlzdGEgdG9pbWVucGlkZXZhaWh0b2VoZG9pc3RhPC9oMT48ZGl2IGNsYXNzPSJzb2MtY29udGVudCI+PHA+S3lsbMOkPC9wPjwvZGl2PjwvZGl2PjwvZGl2PjxkaXYgY2xhc3M9InNvYy1saXN0Ij48ZGl2IGNsYXNzPSJzb2MtaXRlbSI+PGgxIGNsYXNzPSJzb2MtdGl0bGUiPlN1dW5uaXRlbG1hbiB0ZWtvb24gb3NhbGxpc3R1bmVpZGVuIGhlbmtpbMO2aWRlbiBlcmnDpHbDpHQgbsOka2VteWtzZXQgc3V1bm5pdGVsbWFuIHNpc8OkbGzDtnN0w6Q8L2gxPjxkaXYgY2xhc3M9InNvYy1jb250ZW50Ij48cD5BU2Rhc2RhPC9wPjwvZGl2PjwvZGl2PjwvZGl2PjxkaXYgY2xhc3M9InNvYy1saXN0Ij48ZGl2IGNsYXNzPSJzb2MtaXRlbSI+PGgxIGNsYXNzPSJzb2MtdGl0bGUiPlN1dW5uaXRlbG1hbiB0YXJraXN0YW1pbmVuPC9oMT48ZGl2IGNsYXNzPSJzb2MtY29udGVudCI+PHA+UMOkaXbDpG3DpMOkcsOkIGphIGtlbGxvbmFpa2E6IDE5LjAzLjIwMjYgMTMuMzM8YnIvPkFqYW5rb2h0YTogQVNkPGJyLz5QYWlra2E6IEFTRHNhZDxici8+PC9wPjwvZGl2PjwvZGl2PjwvZGl2PjxkaXYgY2xhc3M9InNvYy1saXN0Ij48ZGl2IGNsYXNzPSJzb2MtaXRlbSI+PGgxIGNsYXNzPSJzb2MtdGl0bGUiPlDDpGl2w6Rtw6TDpHLDpDwvaDE+PGRpdiBjbGFzcz0ic29jLWNvbnRlbnQiPjxwPjIzLjAzLjIwMjY8L3A+PC9kaXY+PC9kaXY+PC9kaXY+PGRpdiBjbGFzcz0ic29jLWxpc3QiPjxkaXYgY2xhc3M9InNvYy1pdGVtIj48aDEgY2xhc3M9InNvYy10aXRsZSI+TGFhdGlqYTwvaDE+PGRpdiBjbGFzcz0ic29jLWNvbnRlbnQiPjxwPkpvaGFuc3NvbiwgQW5nZWxpY2E8YnIvPnNvc2lhYWxpb2hqYWFqYTxici8+TGFwc2lwZXJoZWlkZW4gc29zaWFhbGlvaGphdXMgVnVvc2FhcmVuIHBlcmhla2Vza3VzIDEsIEhlbHNpbmdpbiBzb3RlcGU8YnIvPjwvcD48L2Rpdj48L2Rpdj48L2Rpdj48YnIvPjxici8+PC9kaXY+PCEtLSBBbGF0dW5uaXN0ZSAjaW5jbHVkZWxsYSAvU09TTUVUQS9OQVJSQVRJVkUgRk9PVEVSLnhtbHQgLS0+PGRpdiBjbGFzcz0ic29jLWZvb3RlciI+CjxkaXYgY2xhc3M9InNvYy1mdHIxIj48L2Rpdj4KPGRpdiBjbGFzcz0ic29jLWZ0cjIiPjwvZGl2Pgo8ZGl2IGNsYXNzPSJzb2MtZnRyMyI+PC9kaXY+CjwvZGl2PjwvZGl2Pg==</text>
+			<ep2:json xmlns:ep2="urn:hl7finland">
+				<!-- Liitetään asiakirjan JSON -->eyAibGFwc2lwZXJoZWlkZW5fcGFsdmVsdWplbl9hc2lha2Fzc3V1bm5pdGVsbWEiOiB7ICJhc2lha2FzIjogW3sgInN1a3VuaW1pIjogIlNvc2gtQWlrIiwgImV0dW5pbWV0IjogIkthbnRhLUhha3VhdCIsICJoZW5raWxvdHVubnVzIjogeyAic3lzdGVtIjogInVybjpvaWQ6MS4yLjI0Ni4yMSIsICJ2YWx1ZSI6ICIxODA0MThBOTAzTCIgfSB9XSwgInN1dW5uaXRlbG1hIjogeyAia3V2YXVzX2FzaWFra2Fhbl90aWxhbnRlZXN0YSI6ICJhYXNkYXNkIiwgImVkZWxsaXNlbl9zdXVubml0ZWxtYW5fdGF2b2l0dGVpZGVuX3NhYXZ1dHRhbWluZW4iOiB7ICJhcnZpbyI6IHsgInN5c3RlbSI6ICJ1cm46b2lkOjEuMi4yNDYuNTM3LjYuMTI1My4yMDE1MDEiLCAiY29kZSI6ICIxIiwgImRpc3BsYXkiOiAiVGF2b2l0ZSB0YWkgdGF2b2l0dGVldCBvbiBzYWF2dXRldHR1IGtva29uYWFuIiB9LCAic2FuYWxsaW5lbl9hcnZpbyI6ICJhc2QiIH0sICJwYWx2ZWx1dF9qb2l0YV9hc2lha2thYWxsZV9zdXVubml0ZWxsYWFuIjogW3sgInNvc2lhYWxpcGFsdmVsdSI6IHsgInN5c3RlbSI6ICJ1cm46b2lkOjEuMi4yNDYuNTM3LjYuMTIyMi4yMDE2MDEiLCAiY29kZSI6ICI0NSIsICJkaXNwbGF5IjogIlNvc2lhYWxpb2hqYXVzIiB9IH1dLCAic3V1bm5pdGVsbWFfYXNpYWtrYWFuX2phX29tYXR5b250ZWtpamFuX3RhcGFhbWlzaXN0YSI6ICJhc2RhIiwgInNlbHZpdHlzX29pa2V1a3Npc3RhIjogdHJ1ZSwgImVyaWF2YXRfbmFrZW15a3NldCI6ICJBU2Rhc2RhIiwgInN1dW5uaXRlbG1hbl90YXJraXN0YW1pbmVuIjogeyAicGFpdmFtYWFyYV9qYV9rZWxsb25haWthIjogIjIwMjYtMDMtMTlUMTM6MzM6MzArMDM6MDAiLCAiYWphbmtvaHRhIjogIkFTZCIsICJwYWlra2EiOiAiQVNEc2FkIiB9IH0sICJwYWl2YW1hYXJhIjogIjIwMjYtMDMtMjMiLCAibGFhdGlqYSI6IFt7ICJzdWt1bmltaSI6ICJKb2hhbnNzb24iLCAiZXR1bmltZXQiOiAiQW5nZWxpY2EiLCAidGVodGF2YW5pbWlrZSI6ICJzb3NpYWFsaW9oamFhamEiLCAicGFsdmVsdXlrc2lra28iOiB7ICJzeXN0ZW0iOiAidXJuOm9pZDoxLjIuMjQ2LjUzNy42LjIwMi4yMDA4IiwgImNvZGUiOiAiMS4yLjI0Ni4xMC4yMDEyNTY2LjEwLjQwMDA2Nzc1IiwgImRpc3BsYXkiOiAiTGFwc2lwZXJoZWlkZW4gc29zaWFhbGlvaGphdXMgVnVvc2FhcmVuIHBlcmhla2Vza3VzIDEsIEhlbHNpbmdpbiBzb3RlcGUiIH0gfV0gfSB9</ep2:json>
+		</nonXMLBody>
+	</component>
+</ClinicalDocument>

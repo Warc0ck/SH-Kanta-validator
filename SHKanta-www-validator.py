@@ -425,9 +425,14 @@ def main():
         headers = {
             "Content-Type": "application/json",
         }
-
+        
         with st.spinner("Lähetetään sanomaa validaattorille..."):
-            response = requests.post(url, json=data, headers=headers)
+            # Lähetetään POST-pyyntö palvelimelle ja asetaan aikakatkaisu 30 sekuntiin
+            try:
+                response = requests.post(url, json=data, headers=headers, timeout=30)
+            except requests.RequestException as e:
+                st.error(f"Virhe lähetettäessä sanomaa: {e}")
+                return
 
         current_date = datetime.now().strftime("%d%m%y")
         content_type = response.headers.get("Content-Type", "")

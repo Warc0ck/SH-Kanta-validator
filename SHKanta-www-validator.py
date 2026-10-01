@@ -83,26 +83,82 @@ def extract_base64_contents(xml_text: str) -> list:
 
     return decoded_texts
 
+# === Funktio suomalaisen henkilötunnuksen (hetu) muodon ja tarkistusmerkin validointiin ===
+def is_valid_finnish_hetu(hetu: str) -> bool:
+    """
+    Tarkistaa suomalaisen henkilötunnuksen muodon ja tarkistusmerkin.
+    """
+
+    pattern = re.compile(
+        r"^(0[1-9]|[12][0-9]|3[01])"
+        r"(0[1-9]|1[0-2])"
+        r"(\d{2})"
+        r"([-+ABCDEFYXVWU])"
+        r"(\d{3})"
+        r"([0-9A-FHJ-NPR-TW-Z])$",
+        re.IGNORECASE
+    )
+
+    match = pattern.match(hetu)
+
+    if not match:
+        return False
+
+    day = match.group(1)
+    month = match.group(2)
+    year = match.group(3)
+    century = match.group(4)
+    individual = match.group(5)
+    check_char = match.group(6).upper()
+
+    # Tarkistusnumero lasketaan muodosta PP KK VV YYY
+    numeric_part = int(day + month + year + individual)
+
+    check_chars = "0123456789ABCDEFHJKLMNPRSTUVWXY"
+
+    calculated_check_char = check_chars[numeric_part % 31]
+
+    return calculated_check_char == check_char
+
 # === Funktio muun kuin 9-alkuisen henkilötunnuksen tunnistamiseen ===
 def find_non_test_hetus(xml_text: str) -> list:
     """
-    Etsii tekstistä sekä sen sisällä olevista Base64-koodatuista osioista (kuten nonXMLBody ja JSON)
-    henkilötunnukset, joiden loppuosa ei ala numerolla 9 (eli alkaa numerolla 0-8).
-    Testihenkilötunnuksissa loppuosa alkaa aina numerolla 9 (900-999).
+    Etsii tekstistä henkilötunnuksia, jotka:
+    1. näyttävät suomalaiselta henkilötunnukselta
+    2. läpäisevät tarkistusmerkin laskennan
+    3. eivät ole testitunnuksia eli yksilönumero ei ala numerolla 9
     """
+
     hetu_pattern = re.compile(
-        r"\b(0[1-9]|[12][0-9]|3[01])(0[1-9]|1[0-2])\d{2}[-+ABCDEFYXVWU]([0-8]\d{2})[0-9A-FHJ-NPR-TW-Z]\b",
+        r"\b"
+        r"(0[1-9]|[12][0-9]|3[01])"
+        r"(0[1-9]|1[0-2])"
+        r"\d{2}"
+        r"[-+ABCDEFYXVWU]"
+        r"([0-8]\d{2})"
+        r"[0-9A-FHJ-NPR-TW-Z]"
+        r"\b",
         re.IGNORECASE
     )
-    
-    # 1. Etsitään suoraan raakatekstistä
-    found_hetus = set(match.group(0) for match in hetu_pattern.finditer(xml_text))
 
-    # 2. Etsitään Base64-koodatuista osioista (nonXMLBody, JSON jne.)
+    found_hetus = set()
+
+    # Etsitään ensin raakatekstistä mahdolliset hetut
+    for match in hetu_pattern.finditer(xml_text):
+        hetu = match.group(0)
+
+        if is_valid_finnish_hetu(hetu):
+            found_hetus.add(hetu)
+
+    # Etsitään Base64-koodatuista osioista
     base64_payloads = extract_base64_contents(xml_text)
+
     for payload in base64_payloads:
         for match in hetu_pattern.finditer(payload):
-            found_hetus.add(match.group(0))
+            hetu = match.group(0)
+
+            if is_valid_finnish_hetu(hetu):
+                found_hetus.add(hetu)
 
     return list(found_hetus)
 
@@ -144,6 +200,41 @@ def extract_clinical_doc_identifiers(xml_text: str):
 
 # === Apufuntio tarkistaa löytyykö ClinicalDocument xmlns -alkuinen XML-elementti ===
 _CLINICALDOC_REGEX = re.compile(r"<[^>]*ClinicalDocument xmlns\b", re.IGNORECASE)
+
+# === Apufunktio: XML-syöte tiedostona tai liitettynä tekstinä ===
+def xml_syote(otsikko: str, avain: str):
+    with st.container(border=True):
+        st.markdown(f"**{otsikko}**")
+
+        tapa = st.radio(
+            "Syöttötapa",
+            ["📁 Tiedosto", "📝 Teksti"],
+            horizontal=True,
+            key=f"{avain}_tapa",
+            label_visibility="collapsed",
+        )
+
+        if tapa == "📁 Tiedosto":
+            tiedosto = st.file_uploader(
+                f"{otsikko} – tiedosto",
+                type=["xml"],
+                key=f"{avain}_tiedosto",
+                label_visibility="collapsed",
+            )
+            if tiedosto is not None:
+                return tiedosto.getvalue(), tiedosto.name
+        else:
+            teksti = st.text_area(
+                f"{otsikko} – teksti",
+                height=200,
+                placeholder="Liitä XML tähän (Ctrl+V). Vahvista tarvittaessa Ctrl+Enter.",
+                key=f"{avain}_teksti",
+                label_visibility="collapsed",
+            )
+            if teksti.strip():
+                return teksti.encode("utf-8"), f"liitetty teksti ({avain})"
+
+    return None, None
 
 # === Funktio ClinicalDocument-XML:n varmistamiseen ===
 def ensure_clinical_document_xml(asiakirjaXml, source_filename: str = None, verbose: bool = True):
@@ -236,9 +327,31 @@ def ensure_clinical_document_xml(asiakirjaXml, source_filename: str = None, verb
     else:
         raise ValueError("ClinicalDocumentia ei löytynyt, eikä Base64-dekoodattavia kandidaatteja muodostunut.")
 
+# === Rivityksen valintaruutu ===
+@st.fragment
+def rivitysvalinta():
+    rivita = st.checkbox(
+        "Rivitä teksti",
+        value=False,
+        key="rivitys",
+    )
+
+    if rivita:
+        tyyli = "white-space: pre-wrap !important; overflow-wrap: anywhere !important;"
+    else:
+        tyyli = (
+            "white-space: pre !important; overflow-wrap: normal !important; "
+            "overflow-x: auto !important;"
+        )
+
+    st.markdown(
+        f"<style>[data-testid='stTextArea'] textarea {{ {tyyli} }}</style>",
+        unsafe_allow_html=True,
+    )
+
 # === Päätoiminto rakennettu Streamlit-verkkokäyttöliittymäksi ===
 def main():
-    st.set_page_config(page_title="SOSH Kanta validointityökalu 2.0", layout="centered")
+    st.set_page_config(page_title="SOSH Kanta validointityökalu 3.1", layout="centered")
 
     footer_html = """
     <style>
@@ -291,16 +404,28 @@ def main():
         visibility: visible;
         opacity: 1;
     }
-    .block-container {
+    .block-container,
+    [data-testid="stMainBlockContainer"] {
         padding-bottom: 60px;
+        max-width: 1200px !important;
+    }
+    [data-testid="stTextArea"] textarea {
+        font-family: Consolas, "Courier New", monospace !important;
+        font-size: 13px !important;
+        line-height: 1.4 !important;
     }
     </style>
     <div class="custom-footer">
         Tomi Vesala, 2024. Kanta-sanomien validointityökalu. Ei virallinen Kanta-tuote.<br/>
         Päivitetty 28.09.2026
         <span class="tooltip-container">
-            ℹ️ Versiopäivitykset (v3.0)
+            ℹ️ Versiopäivitykset (v3.1)
             <div class="tooltip-box">
+                <strong>Versiossa 3.1 tehdyt muutokset:</strong>
+                <ul>
+                    <li>Lisätty hetun tarkistusmerkin tarkistus ja varoitus, jos asiakirjassa on muu kuin 9-alkuinen yksilönumero.</li>
+                    <li>Lisätty mahdollisuus liittää XML-teksti suoraan tekstikenttään tiedoston sijaan.</li>
+                </ul>
                 <strong>Versiossa 3.0 tehdyt muutokset:</strong>
                 <ul>
                     <li>Siirretty verkkoselaimessa toimivaksi (Streamlit).</li>
@@ -313,8 +438,10 @@ def main():
     """
     st.markdown(footer_html, unsafe_allow_html=True)
 
-    st.title("SOSH Kanta validointityökalu 3.0")
+    st.title("SOSH Kanta validointityökalu 3.1")
     
+    st.divider()
+        
     st.markdown("""
     **Valitse:**
     1. Interface message xml (kehys)
@@ -324,22 +451,19 @@ def main():
     """)
 
     st.divider()
+    rivitysvalinta()
 
     # === Tiedostojensyöttökentät ===
-    kehys_file = st.file_uploader("Valitse Interface message xml-tiedosto (kehys)", type=["xml"])
-    asiakirja_file = st.file_uploader("Valitse Trace message xml-tiedosto", type=["xml"])
+    # XML-syötteet: kummallekin erikseen tiedosto tai liitetty teksti
+    siirtokehys_bytes, kehys_nimi = xml_syote("1. Interface message xml (kehys)", "kehys")
+    asiakirja_bytes, asiakirja_filename = xml_syote("2. Trace message xml tai DocumentXML (asiakirja)", "asiakirja")
 
     if st.button("Suorita validointi", type="primary"):
-        if not kehys_file or not asiakirja_file:
-            st.warning("Valitse molemmat XML-tiedostot ennen validoinnin aloittamista.")
+        if not siirtokehys_bytes or not asiakirja_bytes:
+            st.warning("Syötä molemmat XML-sanomat (tiedostona tai tekstinä) ennen validoinnin aloittamista.")
             return
 
         url = "http://shvalidaattori.at.kanta.fi/shark-validointi/validoi/asiakirja/tulos"
-        asiakirja_filename = asiakirja_file.name
-
-        # Luetaan ladattujen tiedostojen raakatavut
-        asiakirja_bytes = asiakirja_file.getvalue()
-        siirtokehys_bytes = kehys_file.getvalue()
 
         # Varmistetaan, että asiakirjaXml sisältää ClinicalDocumentin
         try:
@@ -359,7 +483,7 @@ def main():
         # Jos löytyi ei-testitunnuksia, näytetään virheilmoitus ja lopetetaan validointi
         if kaikki_muut_hetus:
             st.error("⛔ PYSÄYTETTY: Tiedostoista löytyi henkilötunnuksia, jotka eivät ole testitunnuksia!**")
-            st.warning(f"Seuraavien henkilötunnusten loppuosa ei ala numerolla 9: **{', '.join(kaikki_muut_hetus)}**")
+            st.warning(f"Seuraavat henkilötunnukset eivät ole testitunnuksia: **{', '.join(kaikki_muut_hetus)}**")
             st.info("Varmista tietosuoja ennen pyynnön lähettämistä eteenpäin.")
             return
 
@@ -419,7 +543,7 @@ def main():
             "palveluPyynto": reason_code,
             "level": "1",
             "siirtokehysXml": siirtokehysXml,
-            "asiakirjaXml": f"<?xml version=\"1.0\" encoding=\"utf-16\"?> {asiakirjaXml}"
+            "asiakirjaXml": f"<?xml version=\"1.0\"?> {asiakirjaXml}"
         }
 
         headers = {
@@ -444,7 +568,7 @@ def main():
             st.components.v1.html(html_content, height=400, scrolling=True)
             
             # === Tiedoston latauspainike selaimessa ===
-            st.download_button(
+            st.download_button(on_click="ignore",
                 label="Lataa HTML-vastaus",
                 data=html_content,
                 file_name=f"{current_date}_html_response.html",
@@ -457,13 +581,6 @@ def main():
             formatted_response = "Sanoma validoitu onnistuneesti"
             st.success(f"Pyyntö onnistui: {formatted_response}")
             
-            # === Tiedoston latauspainike selaimessa ===
-            st.download_button(
-                label="Lataa vastaus (JSON)",
-                data=formatted_response,
-                file_name=f"{current_date}_response.json",
-                mime="application/json"
-            )
         else:
             try:
                 error_response = response.json()
@@ -485,14 +602,14 @@ def main():
                     # === Latauspainikkeet virheraporteille ===
                     col1, col2 = st.columns(2)
                     with col1:
-                        st.download_button(
+                        st.download_button(on_click="ignore",
                             label="Lataa muotoiltu virhekuvaus (.txt)",
                             data=formatted_description,
                             file_name=f"{current_date}_formatted_error_description.txt",
                             mime="text/plain"
                         )
                     with col2:
-                        st.download_button(
+                        st.download_button(on_click="ignore",
                             label="Lataa alkuperäinen JSON-virhe",
                             data=formatted_error,
                             file_name=f"{current_date}_error_response.json",
@@ -501,7 +618,7 @@ def main():
             except json.JSONDecodeError:
                 st.error(f"Virhe pyynnössä (Tilakoodi: {response.status_code})")
                 st.text_area("Vastausteksti", response.text, height=200)
-                st.download_button(
+                st.download_button(on_click="ignore",
                     label="Lataa virhevastaus (.txt)",
                     data=response.text,
                     file_name=f"{current_date}_error_response.txt",

@@ -91,7 +91,7 @@ def find_non_test_hetus(xml_text: str) -> list:
     Testihenkilötunnuksissa loppuosa alkaa aina numerolla 9 (900-999).
     """
     hetu_pattern = re.compile(
-        r"\b(0[1-9]|[12][0-9]|3[01])(0[1-9]|1[0-2])\d{2}[-+ABCDEFYX]([0-8]\d{2})[0-9A-FHJ-NPR-TW-Z]\b",
+        r"\b(0[1-9]|[12][0-9]|3[01])(0[1-9]|1[0-2])\d{2}[-+ABCDEFYXVWU]([0-8]\d{2})[0-9A-FHJ-NPR-TW-Z]\b",
         re.IGNORECASE
     )
     

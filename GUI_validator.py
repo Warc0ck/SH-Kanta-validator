@@ -266,7 +266,7 @@ def main():
     """
     st.markdown(footer_html, unsafe_allow_html=True)
 
-    st.title("SOSH Kanta validointityökalu 2.0")
+    st.title("SOSH Kanta validointityökalu 3.0")
     
     st.markdown("""
     **Valitse:**

@@ -238,7 +238,7 @@ def ensure_clinical_document_xml(asiakirjaXml, source_filename: str = None, verb
 
 # === Päätoiminto rakennettu Streamlit-verkkokäyttöliittymäksi ===
 def main():
-    st.set_page_config(page_title="SOSH Kanta validointityökalu 2.0", layout="centered")
+    st.set_page_config(page_title="SOSH Kanta validointityökalu 3.0", layout="centered")
 
     footer_html = """
     <style>

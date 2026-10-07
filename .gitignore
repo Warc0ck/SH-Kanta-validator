@@ -27,6 +27,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 .agents/
+AGENTS.md
 
 # Environment variables & secrets
 .env

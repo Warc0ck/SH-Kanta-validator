@@ -240,14 +240,14 @@ def main():
         font-size: 13px !important;
         line-height: 1.4 !important;
     }
-    /* Palkit vain ylivuotavalle sisällölle, teeman alkuperäisellä peukalovärillä. */
+    /* Palkit vain ylivuotavalle sisällölle, teeman alkuperäisellä värillä. */
     [data-testid="stCode"] > pre,
     [data-testid="stTextArea"] textarea {
         overflow: auto !important;
         scrollbar-width: thin !important;
         scrollbar-color: color-mix(in srgb, currentColor 40%, transparent) transparent !important;
     }
-    /* Kiinteä koko estää macOS:n palkkien piiloutumisen. Standardityylit
+    /* Kiinteä koko estää palkkien piiloutumisen. Standardityylit
        nollataan tässä, jotta ne eivät ohita WebKit-palkkien kokoa ja värejä. */
     @supports selector(::-webkit-scrollbar) {
         [data-testid="stCode"] > pre,
@@ -296,7 +296,7 @@ def main():
         </span>
     </div>
     """
-    st.markdown(f"""<h1 style=\"text-align: center;\">SOSH Kanta validointityökalu 3.2</h1>{footer_html}""", unsafe_allow_html=True)
+    st.markdown("""<h1 style=\"text-align: center;\">SOSH Kanta validointityökalu 3.2</h1>""", unsafe_allow_html=True)
 
     # st.title("SOSH Kanta validointityökalu 3.2")
     
@@ -328,6 +328,9 @@ def main():
     saved = st.session_state.get(RESULT_KEY)
     if saved is not None:
         _render_result(saved, signature)
+
+    # Renderöi footer HTML:nä, jotta CSS:n tyhjät rivit eivät katkaise sitä.
+    st.html(footer_html)
 
 
 def _launch():

@@ -1,205 +1,126 @@
-import importlib
-import subprocess
+#!/usr/bin/env python3
+"""Streamlit-käyttöliittymä SOSH Kanta -sanomien validointiin."""
+
+from datetime import datetime
+from hashlib import sha256
+from pathlib import Path
+import os
 import sys
 
-# Lista riippuvuuksista
-required_packages = ["requests", "json", "re", "datetime", "xml.etree.ElementTree", "base64", "streamlit"]
+try:
+    import requests
+    import streamlit as st
+except ModuleNotFoundError as exc:
+    raise SystemExit(
+        "Riippuvuus puuttuu. Asenna riippuvuudet komennolla "
+        "python -m pip install -r requirements.txt ja käynnistä sovellus "
+        "komennolla python SHKanta-www-validator.py."
+    ) from exc
 
-def check_and_install(packages):
-    for package in packages:
-        try:
-            importlib.import_module(package)
-        except ImportError:
-            print(f"{package} puuttuu. Asennetaan...")
-            subprocess.run([sys.executable, "-m", "pip", "install", package])
+from validator_core import prepare_validation_request
+from validator_response import interpret_response
 
-if __name__ == "__main__":
-    check_and_install(required_packages)
+VALIDATOR_URL = "http://shvalidaattori.at.kanta.fi/shark-validointi/validoi/asiakirja/tulos"
+RESULT_KEY = "validation_result"
 
-import requests
-import json
-import xml.etree.ElementTree as ET
-import re
-from datetime import datetime
-import base64
-import os
-import streamlit as st # Käytetään suoritukseen Streamlit-kirjastoa, joka tarjoaa web-käyttöliittymän.
-from streamlit.web import cli as stcli # Streamlit CLI:n käyttö mahdollistaa sovelluksen ajamisen komentoriviltä.
 
-# === Apufunktio tavujen muuntamiseksi tekstiksi eri merkistökoodauksilla ===
-def _to_text_helper(b):
-    if isinstance(b, bytes):
-        for enc in ("utf-8", "utf-16", "utf-16le", "utf-16be", "latin-1"):
-            try:
-                return b.decode(enc)
-            except UnicodeDecodeError:
-                continue
-        return b.decode("utf-8", errors="replace")
-    return str(b) if b is not None else ""
+def _input_signature(frame_source, document_source):
+    """Liittää tallennetun tuloksen täsmälleen käytettyihin syötteisiin."""
+    digest = sha256()
+    for source in (frame_source, document_source):
+        value = source.encode("utf-8") if isinstance(source, str) else (source or b"")
+        digest.update(len(value).to_bytes(8, "big"))
+        digest.update(value)
+    return digest.hexdigest()
 
-# === Funktio Base64-koodattujen lohkojen (nonXMLBody, JSON jne.) etsimiseen ja purkamiseen hetu-tarkistukseen ===
-def extract_base64_contents(xml_text: str) -> list:
-    """
-    Etsii XML- ja tekstiaineistosta Base64-koodatut lohkot (esim. nonXMLBody, JSON ja B64-elementit)
-    ja palauttaa ne purettuna tekstinä.
-    """
-    decoded_texts = []
-    
-    # Etsitään XML-elementeistä teksti (esim. <text representation="B64"> tai <nonXMLBody>...)
-    b64_tag_pattern = re.compile(
-        r'<(?:[a-zA-Z0-9_]+:)?(?:nonXMLBody|text|value|data)[^>]*>(.*?)</(?:[a-zA-Z0-9_]+:)?(?:nonXMLBody|text|value|data)>', 
-        re.DOTALL | re.IGNORECASE
-    )
-    
-    # Etsitään myös yleisiä pitkiä Base64-merkkijonoja tekstistä
-    b64_string_pattern = re.compile(r'(?:[A-Za-z0-9+/]{4}){6,}(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?')
 
-    candidates = set()
-    for match in b64_tag_pattern.finditer(xml_text):
-        raw_val = match.group(1).strip()
-        # Jos sisältää CDATA, poistetaan CDATA-kääre
-        cdata_match = re.search(r'<!\[CDATA\[(.*?)\]\]>', raw_val, re.DOTALL)
-        if cdata_match:
-            raw_val = cdata_match.group(1).strip()
-        # Poistetaan mahdolliset sisäiset XML-tägit
-        clean_val = re.sub(r'<[^>]+>', '', raw_val).strip()
-        if clean_val:
-            candidates.add(clean_val)
-
-    for match in b64_string_pattern.finditer(xml_text):
-        candidates.add(match.group(0).strip())
-
-    for cand in candidates:
-        cleaned_cand = "".join(cand.split())
-        if len(cleaned_cand) < 16 or len(cleaned_cand) % 4 != 0:
-            continue
-        try:
-            decoded_bytes = base64.b64decode(cleaned_cand, validate=True)
-            dec_text = _to_text_helper(decoded_bytes)
-            if dec_text and len(dec_text) > 5:
-                decoded_texts.append(dec_text)
-        except Exception:
-            continue
-
-    return decoded_texts
-
-# === Funktio suomalaisen henkilötunnuksen (hetu) muodon ja tarkistusmerkin validointiin ===
-def is_valid_finnish_hetu(hetu: str) -> bool:
-    """
-    Tarkistaa suomalaisen henkilötunnuksen muodon ja tarkistusmerkin.
-    """
-
-    pattern = re.compile(
-        r"^(0[1-9]|[12][0-9]|3[01])"
-        r"(0[1-9]|1[0-2])"
-        r"(\d{2})"
-        r"([-+ABCDEFYXVWU])"
-        r"(\d{3})"
-        r"([0-9A-FHJ-NPR-TW-Z])$",
-        re.IGNORECASE
-    )
-
-    match = pattern.match(hetu)
-
-    if not match:
-        return False
-
-    day = match.group(1)
-    month = match.group(2)
-    year = match.group(3)
-    century = match.group(4)
-    individual = match.group(5)
-    check_char = match.group(6).upper()
-
-    # Tarkistusnumero lasketaan muodosta PP KK VV YYY
-    numeric_part = int(day + month + year + individual)
-
-    check_chars = "0123456789ABCDEFHJKLMNPRSTUVWXY"
-
-    calculated_check_char = check_chars[numeric_part % 31]
-
-    return calculated_check_char == check_char
-
-# === Funktio muun kuin 9-alkuisen henkilötunnuksen tunnistamiseen ===
-def find_non_test_hetus(xml_text: str) -> list:
-    """
-    Etsii tekstistä henkilötunnuksia, jotka:
-    1. näyttävät suomalaiselta henkilötunnukselta
-    2. läpäisevät tarkistusmerkin laskennan
-    3. eivät ole testitunnuksia eli yksilönumero ei ala numerolla 9
-    """
-
-    hetu_pattern = re.compile(
-        r"\b"
-        r"(0[1-9]|[12][0-9]|3[01])"
-        r"(0[1-9]|1[0-2])"
-        r"\d{2}"
-        r"[-+ABCDEFYXVWU]"
-        r"([0-8]\d{2})"
-        r"[0-9A-FHJ-NPR-TW-Z]"
-        r"\b",
-        re.IGNORECASE
-    )
-
-    found_hetus = set()
-
-    # Etsitään ensin raakatekstistä mahdolliset hetut
-    for match in hetu_pattern.finditer(xml_text):
-        hetu = match.group(0)
-
-        if is_valid_finnish_hetu(hetu):
-            found_hetus.add(hetu)
-
-    # Etsitään Base64-koodatuista osioista
-    base64_payloads = extract_base64_contents(xml_text)
-
-    for payload in base64_payloads:
-        for match in hetu_pattern.finditer(payload):
-            hetu = match.group(0)
-
-            if is_valid_finnish_hetu(hetu):
-                found_hetus.add(hetu)
-
-    return list(found_hetus)
-
-# === Funktio ClinicalDocument id/setId @root -tunnisteiden lukemiseen ===
-def extract_clinical_doc_identifiers(xml_text: str):
-    """
-    Etsii XML-tekstistä ClinicalDocument- / clinicalDocument -elementin id:n ja setId:n @root-arvot.
-    Tukee sekä suoraa dokumenttia että siirtokehyksen sisällä olevaa dokumenttia.
-    """
+def _run_validation(frame_source, document_source, signature, source_names):
+    """Tekee paikalliset tarkistukset ennen yhtä HTTP-pyyntöä."""
+    saved = {
+        "signature": signature,
+        "source_names": source_names,
+        "file_date": datetime.now().strftime("%d%m%y"),
+        "checks": [],
+        "reason_code": None,
+        "error": None,
+        "response": None,
+    }
+    if not frame_source or not document_source:
+        saved["error"] = "Syötä molemmat XML-sanomat ennen validoinnin aloittamista."
+        return saved
     try:
-        root = ET.fromstring(xml_text)
-    except Exception:
-        return None, None
+        payload, checks = prepare_validation_request(frame_source, document_source)
+    except ValueError as exc:
+        saved["error"] = f"⛔ Validointi pysäytetty: {exc}"
+        return saved
 
-    clin_doc = None
-    # Muunnetaan tägin nimi pieniksi kirjaimiksi vertailua varten (.lower()), jolloin sekä "ClinicalDocument" että "clinicalDocument" täsmäävät.
-    if root.tag.lower().endswith("clinicaldocument"):
-        clin_doc = root
-    else:
-        for elem in root.iter():
-            if elem.tag.lower().endswith("clinicaldocument"):
-                clin_doc = elem
-                break
+    saved["checks"] = checks
+    saved["reason_code"] = payload["palveluPyynto"]
+    with st.spinner("Lähetetään sanomaa validaattorille..."):
+        try:
+            response = requests.post(VALIDATOR_URL, json=payload, timeout=30)
+        except requests.RequestException as exc:
+            saved["error"] = f"Virhe lähetettäessä sanomaa: {exc}"
+            return saved
+    saved["response"] = interpret_response(
+        response.status_code,
+        response.headers.get("Content-Type", ""),
+        response.text,
+        saved["reason_code"],
+    )
+    return saved
 
-    if clin_doc is None:
-        return None, None
 
-    id_root = None
-    set_id_root = None
+def _render_result(saved, current_signature):
+    """Näyttää myös aiemmalla suorituksella muodostetut raportit."""
+    if saved["signature"] != current_signature:
+        st.warning(
+            "Syötteet ovat muuttuneet. Alla näkyvä tulos koskee edellisiä syötteitä. "
+            "Suorita validointi uudelleen päivitetylle aineistolle."
+        )
+    sources = " / ".join(name for name in saved["source_names"] if name)
+    if sources:
+        st.caption(f"Validoidut syötteet: {sources}")
+    for label, value in saved["checks"]:
+        st.success(f"✅ ClinicalDocument {label} (@root) täsmää: `{value}`")
+    if saved["reason_code"]:
+        st.info(f"Palvelupyyntö (reasonCode): **{saved['reason_code']}**")
+    if saved["error"]:
+        st.error(saved["error"])
+        return
 
-    for child in clin_doc:
-        tag_name = child.tag.split("}")[-1] if "}" in child.tag else child.tag
-        if tag_name == "id":
-            id_root = child.get("root")
-        elif tag_name == "setId":
-            set_id_root = child.get("root")
+    result = saved["response"]
+    if result is None:
+        return
+    if result.success:
+        st.success(result.message)
+        return
+    st.error(result.message)
+    wrap_lines = st.session_state.get("rivitys", False)
+    if result.formatted_description:
+        st.subheader("Muotoiltu virhekuvaus")
+        st.caption("Virheen tiedot")
+        st.code(
+            result.formatted_description, language=None, height=300,
+            wrap_lines=wrap_lines,
+        )
+        st.download_button(
+            "Lataa muotoiltu virhekuvaus (.txt)",
+            data=result.formatted_description,
+            file_name=f"{saved['file_date']}_formatted_error_description.txt",
+            mime="text/plain", on_click="ignore", key="download_description",
+        )
+    st.caption("Alkuperäinen vastaus")
+    st.code(
+        result.response_text, language=None, height=250,
+        wrap_lines=wrap_lines,
+    )
+    st.download_button(
+        result.response_label, data=result.response_text,
+        file_name=f"{saved['file_date']}_{result.response_filename_suffix}",
+        mime=result.response_mime, on_click="ignore", key="download_response",
+    )
 
-    return id_root, set_id_root
-
-# === Apufuntio tarkistaa löytyykö ClinicalDocument xmlns -alkuinen XML-elementti ===
-_CLINICALDOC_REGEX = re.compile(r"<[^>]*ClinicalDocument xmlns\b", re.IGNORECASE)
 
 # === Apufunktio: XML-syöte tiedostona tai liitettynä tekstinä ===
 def xml_syote(otsikko: str, key: str):
@@ -232,103 +153,11 @@ def xml_syote(otsikko: str, key: str):
                 label_visibility="collapsed",
             )
             if teksti.strip():
-                return teksti.encode("utf-8"), f"liitetty teksti ({key})"
+                return teksti, f"liitetty teksti ({key})"
 
     return None, None
 
-# === Funktio ClinicalDocument-XML:n varmistamiseen ===
-def ensure_clinical_document_xml(asiakirjaXml, source_filename: str = None, verbose: bool = True):
-    """
-    Palauttaa ClinicalDocument-XML:n tekstinä.
-    - Jos suoraan tekstissä löytyy <...ClinicalDocument...>, palauttaa sellaisenaan.
-    - Muuten yrittää Base64-dekoodauksen useilla strategioilla (URL-safe, padding-korjaus).
-    - CDATA-lohkon sisältö otetaan ulos ennen tarkistusta.
-    Heittää ValueError, jos ei löydy.
-    """   
-    def _clean_text(s: str) -> str:
-        return s.replace("\ufeff", "").strip()
-
-    def _looks_like_xml(s: str) -> bool:
-        return bool(_CLINICALDOC_REGEX.search(s))
-
-    def _strip_cdata(s: str) -> str:
-        m = re.search(r"&amp;lt;!\[CDATA\[(.*?)\]\]&amp;gt;", s, flags=re.DOTALL) or \
-            re.search(r"&lt;!\[CDATA\[(.*?)\]\]&gt;", s, flags=re.DOTALL)
-        return m.group(1) if m else s
-
-    # Kutsutaan suoraan globaalia apufunktiota
-    text = _clean_text(_to_text_helper(asiakirjaXml))
-    text_no_cdata = _strip_cdata(text)
-    if _looks_like_xml(text_no_cdata):
-        if verbose:
-            st.info("ClinicalDocument löytyi suoraan.")
-        return text_no_cdata
-
-    if verbose:
-        st.info("ClinicalDocument ei löytynyt suoraan. Yritetään Base64-dekoodausta...")
-
-    def _b64_normalize(s: str) -> str:
-        s = s.replace(r"\n|\r", "").strip()
-        s = re.sub(r"[^A-Za-z0-9\+/_=\-]", "", s)
-        s = s.replace("-", "+").replace("_", "/")
-        pad = len(s) % 4
-        if pad:
-            s += "=" * (4 - pad)
-        return s
-
-    candidates = []
-    norm = _b64_normalize(text)
-    if norm:
-        candidates.append(("b64-normalized", norm))
-
-    compact = "".join(text.split())
-    norm_compact = _b64_normalize(compact)
-    if norm_compact and norm_compact != norm:
-        candidates.append(("b64-compact", norm_compact))
-
-    if text != text_no_cdata:
-        norm_cdata = _b64_normalize(text_no_cdata)
-        if norm_cdata:
-            candidates.append(("b64-from-cdata", norm_cdata))
-
-    last_errors = []
-    for label, cand in candidates:
-        try:
-            decoded = base64.b64decode(cand, validate=False)
-        except Exception as e:
-            if source_filename:
-                last_errors.append(f"{label}: {source_filename}: b64 decode error: {e}")
-            else:
-                last_errors.append(f"{label}: b64 decode error: {e}")
-            continue
-
-        # Kutsutaan suoraan globaalia apufunktiota
-        decoded_text = _clean_text(_to_text_helper(decoded))
-        decoded_text = _strip_cdata(decoded_text)
-
-        if _looks_like_xml(decoded_text):
-            if verbose:
-                st.success(f"ClinicalDocument löytyi Base64-dekoodauksen kautta ({label}).")
-            return decoded_text
-        else:
-            if decoded_text.lstrip().startswith("&lt;") and verbose:
-                st.warning(f"Huomio: {label} tuotti XML:ää, mutta 'ClinicalDocument' ei löytynyt.")
-            if source_filename:
-                last_errors.append(f"{source_filename} ei sisällä ClinicalDocumentia.")
-            else:
-                last_errors.append(f"XML ei sisällä ClinicalDocumentia.")
-
-    if last_errors:
-        dbg = "\n".join(last_errors)
-        raise ValueError(
-            "ClinicalDocument ei löytynyt asiakirjaXml:stä, ei alkuperäisenä eikä Base64-dekoodattuna.\n"
-            f"\n{dbg}"
-        )
-    else:
-        raise ValueError("ClinicalDocumentia ei löytynyt, eikä Base64-dekoodattavia kandidaatteja muodostunut.")
-
 # === Rivityksen valintaruutu ===
-@st.fragment
 def rivitysvalinta():
     rivita = st.checkbox(
         "Rivitä teksti",
@@ -339,10 +168,7 @@ def rivitysvalinta():
     if rivita:
         tyyli = "white-space: pre-wrap !important; overflow-wrap: anywhere !important;"
     else:
-        tyyli = (
-            "white-space: pre !important; overflow-wrap: normal !important; "
-            "overflow-x: scroll !important;"
-        )
+        tyyli = "white-space: pre !important; overflow-wrap: normal !important;"
 
     st.markdown(
         f"<style>[data-testid='stTextArea'] textarea {{ {tyyli} }}</style>",
@@ -351,7 +177,7 @@ def rivitysvalinta():
 
 # === Päätoiminto rakennettu Streamlit-verkkokäyttöliittymäksi ===
 def main():
-    st.set_page_config(page_title="SOSH Kanta validointityökalu 3.1", layout="centered")
+    st.set_page_config(page_title="SOSH Kanta validointityökalu 3.2", layout="centered")
 
     footer_html = """
     <style>
@@ -414,31 +240,65 @@ def main():
         font-size: 13px !important;
         line-height: 1.4 !important;
     }
+    /* Palkit vain ylivuotavalle sisällölle, teeman alkuperäisellä peukalovärillä. */
+    [data-testid="stCode"] > pre,
+    [data-testid="stTextArea"] textarea {
+        overflow: auto !important;
+        scrollbar-width: thin !important;
+        scrollbar-color: color-mix(in srgb, currentColor 40%, transparent) transparent !important;
+    }
+    /* Kiinteä koko estää macOS:n palkkien piiloutumisen. Standardityylit
+       nollataan tässä, jotta ne eivät ohita WebKit-palkkien kokoa ja värejä. */
+    @supports selector(::-webkit-scrollbar) {
+        [data-testid="stCode"] > pre,
+        [data-testid="stTextArea"] textarea {
+            scrollbar-width: auto !important;
+            scrollbar-color: auto !important;
+        }
+        [data-testid="stCode"] > pre::-webkit-scrollbar,
+        [data-testid="stTextArea"] textarea::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        [data-testid="stCode"] > pre::-webkit-scrollbar-thumb,
+        [data-testid="stTextArea"] textarea::-webkit-scrollbar-thumb {
+            background: color-mix(in srgb, currentColor 40%, transparent);
+            border-radius: 9999px;
+        }
+        [data-testid="stCode"] > pre::-webkit-scrollbar-track,
+        [data-testid="stCode"] > pre::-webkit-scrollbar-corner,
+        [data-testid="stTextArea"] textarea::-webkit-scrollbar-track,
+        [data-testid="stTextArea"] textarea::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+    }
+
     </style>
     <div class="custom-footer">
         Tomi Vesala, 2024. Kanta-sanomien validointityökalu. Ei virallinen Kanta-tuote.<br/>
-        Päivitetty 28.09.2026
+        Päivitetty 08.10.2026
         <span class="tooltip-container">
-            ℹ️ Versiopäivitykset (v3.1)
+            ℹ️ Versiopäivitykset (v3.2)
             <div class="tooltip-box">
-                <strong>Versiossa 3.1 tehdyt muutokset:</strong>
+                <strong>Versiossa 3.2 tehdyt muutokset:</strong>
                 <ul>
-                    <li>Lisätty hetun tarkistusmerkin tarkistus ja varoitus, jos asiakirjassa on muu kuin 9-alkuinen yksilönumero.</li>
-                    <li>Lisätty mahdollisuus liittää XML-teksti suoraan tekstikenttään tiedoston sijaan.</li>
+                    <li>Korjattu henkilötunnusten tunnistus ja XML:n käsittely.</li>
+                    <li>Lisätty lähetyksen estävät tunniste- ja palvelupyyntötarkistukset.</li>
+                    <li>Validointitulokset ja ladattavat raportit säilyvät näkymässä.</li>
                 </ul>
                 <strong>Versiossa 3.0 tehdyt muutokset:</strong>
                 <ul>
                     <li>Siirretty verkkoselaimessa toimivaksi (Streamlit).</li>
-                    <li><strong>Base64/JSON/nonXMLBody-tarkistus:</strong> Estää aitojen henkilötunnusten (muu kuin 9-alkuinen yksilönumero) lähettämisen.</li>
+                    <li><strong>Base64/JSON/nonXMLBody-tarkistus:</strong> Etsii henkilötunnuksia XML:stä ja koodatuista tekstisisällöistä.</li>
                     <li><strong>OID-tarkistus:</strong> Vertailee kehyksen ja asiakirjan <code>id/@root</code> ja <code>setId/@root</code> tunnisteet.</li>
                 </ul>
             </div>
         </span>
     </div>
     """
-    st.markdown(f"""<h1 style=\"text-align: center;\">SOSH Kanta validointityökalu 3.1</h1>{footer_html}""", unsafe_allow_html=True)
+    st.markdown(f"""<h1 style=\"text-align: center;\">SOSH Kanta validointityökalu 3.2</h1>{footer_html}""", unsafe_allow_html=True)
 
-    # st.title("SOSH Kanta validointityökalu 3.1")
+    # st.title("SOSH Kanta validointityökalu 3.2")
     
     st.divider()
         
@@ -455,179 +315,34 @@ def main():
 
     # === Tiedostojensyöttökentät ===
     # XML-syötteet: kummallekin erikseen tiedosto tai liitetty teksti
-    siirtokehys_bytes, kehys_nimi = xml_syote("1. Interface message xml (kehys)", "kehys")
-    asiakirja_bytes, asiakirja_filename = xml_syote("2. Trace message xml tai DocumentXML (asiakirja)", "asiakirja")
+    siirtokehys_source, kehys_nimi = xml_syote("1. Interface message xml (kehys)", "kehys")
+    asiakirja_source, asiakirja_filename = xml_syote("2. Trace message xml tai DocumentXML (asiakirja)", "asiakirja")
 
+    signature = _input_signature(siirtokehys_source, asiakirja_source)
     if st.button("Suorita validointi", type="primary"):
-        if not siirtokehys_bytes or not asiakirja_bytes:
-            st.warning("Syötä molemmat XML-sanomat (tiedostona tai tekstinä) ennen validoinnin aloittamista.")
-            return
+        st.session_state[RESULT_KEY] = _run_validation(
+            siirtokehys_source, asiakirja_source, signature,
+            (kehys_nimi, asiakirja_filename),
+        )
 
-        url = "http://shvalidaattori.at.kanta.fi/shark-validointi/validoi/asiakirja/tulos"
+    saved = st.session_state.get(RESULT_KEY)
+    if saved is not None:
+        _render_result(saved, signature)
 
-        # Varmistetaan, että asiakirjaXml sisältää ClinicalDocumentin
-        try:
-            asiakirjaXml = ensure_clinical_document_xml(asiakirja_bytes, source_filename=asiakirja_filename)
-        except ValueError as e:
-            st.error(f"Virhe asiakirjan käsittelyssä:\n{e}")
-            return
 
-        # Tulkitaan siirtokehysXml tekstiksi uudistetulla dekoodauksella
-        siirtokehysXml = _to_text_helper(siirtokehys_bytes)
-
-        # Etsitään XML-sisällöstä kaikki henkilötunnukset, jotka eivät ole testitunnuksia
-        hetus_kehys = find_non_test_hetus(siirtokehysXml)
-        hetus_asiakirja = find_non_test_hetus(asiakirjaXml)
-        kaikki_muut_hetus = list(set(hetus_kehys + hetus_asiakirja))
-
-        # Jos löytyi ei-testitunnuksia, näytetään virheilmoitus ja lopetetaan validointi
-        if kaikki_muut_hetus:
-            st.error("⛔ PYSÄYTETTY: Tiedostoista löytyi henkilötunnuksia, jotka eivät ole **testitunnuksia!**")
-            st.warning(f"Seuraavat henkilötunnukset eivät ole testitunnuksia: **{', '.join(kaikki_muut_hetus)}**")
-            st.info("Varmista tietosuoja ennen pyynnön lähettämistä eteenpäin.")
-            return
-
-        # === ClinicalDocument id/setId @root -tarkistus kehyksen ja asiakirjan välillä ===
-        kehys_id, kehys_setid = extract_clinical_doc_identifiers(siirtokehysXml)
-        asiakirja_id, asiakirja_setid = extract_clinical_doc_identifiers(asiakirjaXml)
-
-        # Tarkistetaan id/@root
-        if kehys_id or asiakirja_id:
-            if kehys_id and asiakirja_id and kehys_id == asiakirja_id:
-                st.success(f"✅ **ClinicalDocument id (@root) täsmää:** `{asiakirja_id}`")
-            else:
-                st.error(
-                    f"⚠️ **VIRHE: ClinicalDocument id (@root) ei täsmää!**\n"
-                    f"- Kehys: `{kehys_id}`\n"
-                    f"- Asiakirja: `{asiakirja_id}`"
-                )
-
-        # Tarkistetaan setId/@root
-        if kehys_setid or asiakirja_setid:
-            if kehys_setid and asiakirja_setid and kehys_setid == asiakirja_setid:
-                st.success(f"✅ **ClinicalDocument setId (@root) täsmää:** `{asiakirja_setid}`")
-            else:
-                st.error(
-                    f"⚠️ **VIRHE: ClinicalDocument setId (@root) ei täsmää!**\n"
-                    f"- Kehys: `{kehys_setid}`\n"
-                    f"- Asiakirja: `{asiakirja_setid}`"
-                )
-
-        # Nimialueiden rekisteröinti
-        namespaces = {'': 'urn:hl7-org:v3'}
-
-        # siirtokehysXml:n jäsentäminen reasonCode-attribuutin arvon löytämiseksi
-        try:
-            root = ET.fromstring(siirtokehysXml)
-            control_act_process_element = root.find('.//{urn:hl7-org:v3}controlActProcess', namespaces)
-
-            if control_act_process_element is not None:
-                reason_code_element = control_act_process_element.find('{urn:hl7-org:v3}reasonCode')
-
-                if reason_code_element is not None:
-                    reason_code = reason_code_element.get('code')
-                    st.info(f"Palvelupyyntö (reasonCode): **{reason_code}**")
-                else:
-                    st.error("reasonCode-elementtiä ei löytynyt. Tarkista XML-rakenne.")
-                    return
-            else:
-                st.error("controlActProcess-elementtiä ei löytynyt. Tarkista XML-rakenne.")
-                return
-        except ET.ParseError as e:
-            st.error(f"Palvelupyyntökoodia ei löydy: {e}")
-            return
-
-        # POST-pyynnön tiedot, otsikot ja JSON-data sekä lähetetään palvelimelle
-        data = {
-            "messageId": "1234567890",
-            "palveluPyynto": reason_code,
-            "level": "1",
-            "siirtokehysXml": siirtokehysXml,
-            "asiakirjaXml": f"<?xml version=\"1.0\"?> {asiakirjaXml}"
-        }
-
-        headers = {
-            "Content-Type": "application/json",
-        }
-        
-        with st.spinner("Lähetetään sanomaa validaattorille..."):
-            # Lähetetään POST-pyyntö palvelimelle ja asetaan aikakatkaisu 30 sekuntiin
-            try:
-                response = requests.post(url, json=data, headers=headers, timeout=30)
-            except requests.RequestException as e:
-                st.error(f"Virhe lähetettäessä sanomaa: {e}")
-                return
-
-        current_date = datetime.now().strftime("%d%m%y")
-        content_type = response.headers.get("Content-Type", "")
-
-        # Jos palvelin palauttaa HTML-sisällön
-        if "text/html" in content_type:
-            st.error("Palvelin palautti HTML-sisällön.")
-            html_content = response.text
-            st.components.v1.html(html_content, height=400, scrolling=True)
-            
-            # === Tiedoston latauspainike selaimessa ===
-            st.download_button(on_click="ignore",
-                label="Lataa HTML-vastaus",
-                data=html_content,
-                file_name=f"{current_date}_html_response.html",
-                mime="text/html"
-            )
-            return
-
-        # Tarkistetaan pyynnön tulos
-        if response.status_code == 200:
-            formatted_response = "Sanoma validoitu onnistuneesti"
-            st.success(f"Pyyntö onnistui: {formatted_response}")
-            
-        else:
-            try:
-                error_response = response.json()
-                formatted_error = json.dumps(error_response, indent=4, ensure_ascii=False)
-                
-                st.error(f"Virhe pyynnössä (Tilakoodi: {response.status_code})")
-                
-                # Käsitellään raaka vastaus ja muotoillaan virhekuvaus
-                if 'description' in error_response:
-                    formatted_description = re.sub(r'(?<=\d;)', '\n', error_response['description'])
-                    formatted_description = re.sub(r';', r';\n', formatted_description)
-                    formatted_description = re.sub(r' +', ' ', formatted_description).strip()
-                    formatted_description = re.sub(r'( \d+: )', r'\n\1', formatted_description)
-                    formatted_description += f"\n\nPalvelupyyntö: {reason_code}"
-
-                    st.subheader("Muotoiltu virhekuvaus")
-                    st.text_area("Virheen tiedot", formatted_description, height=300)
-
-                    # === Latauspainikkeet virheraporteille ===
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.download_button(on_click="ignore",
-                            label="Lataa muotoiltu virhekuvaus (.txt)",
-                            data=formatted_description,
-                            file_name=f"{current_date}_formatted_error_description.txt",
-                            mime="text/plain"
-                        )
-                    with col2:
-                        st.download_button(on_click="ignore",
-                            label="Lataa alkuperäinen JSON-virhe",
-                            data=formatted_error,
-                            file_name=f"{current_date}_error_response.json",
-                            mime="application/json"
-                        )
-            except json.JSONDecodeError:
-                st.error(f"Virhe pyynnössä (Tilakoodi: {response.status_code})")
-                st.text_area("Vastausteksti", response.text, height=200)
-                st.download_button(on_click="ignore",
-                    label="Lataa virhevastaus (.txt)",
-                    data=response.text,
-                    file_name=f"{current_date}_error_response.txt",
-                    mime="text/plain"
-                )
-
-if __name__ == "__main__":
+def _launch():
+    """Käynnistää Streamlitin vain suoraan Pythonista ajettaessa."""
     if st.runtime.exists():
         main()
-    else:
-        sys.argv = ["streamlit", "run", __file__]
-        sys.exit(stcli.main())
+        return
+    command = [
+        sys.executable, "-m", "streamlit", "run",
+        str(Path(__file__).resolve()), *sys.argv[1:],
+    ]
+    # Korvaa käynnistysohjelma Streamlitillä, jotta Ctrl+C pysäyttää yhden
+    # prosessin ilman odottavan Python-prosessin KeyboardInterrupt-jälkeä.
+    os.execv(sys.executable, command)
+
+
+if __name__ == "__main__":
+    _launch()

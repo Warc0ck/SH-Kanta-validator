@@ -6,25 +6,53 @@ ne käyttäjän käynnistämällä pyynnöllä validointipalveluun.
 
 ## Asennus ja käynnistys
 
-Käytä Python 3.10:tä tai uudempaa. Luo virtuaaliympäristö projektin hakemistossa
-ja asenna määritellyt riippuvuudet ennen käynnistystä:
+Käytä Python 3.10:tä tai uudempaa. Käynnistä sovellus projektin hakemistossa:
+
+```sh
+python3 SHKanta-www-validator.py
+```
+
+`validator_bootstrap.py` tarkistaa projektin `.venv`-ympäristön, Python-version
+sekä `requirements.txt`-tiedoston mukaiset pakettiversiot ja toimivat tuonnit.
+Valmiista projektin ympäristöstä sovellus käynnistyy suoraan. Jos ympäristö
+puuttuu tai tarvitsee riippuvuuksia, terminaaliin avautuu suomenkielinen
+käynnistysvalikko:
+
+- **1:** Luo tai täydennä projektin `.venv`, asenna määritellyt riippuvuudet
+  ja käynnistä sovellus. Asennuksen eteneminen näkyy terminaalissa.
+- **2:** Käytä nykyistä Python-ympäristöä, jos se täyttää vaatimukset.
+  Tämä vaihtoehto näkyy vain kelvolliselle ympäristölle.
+- **0:** Lopeta tekemättä asennuksia.
+
+Pakettien asennus tehdään vain projektin `.venv`-ympäristöön ja vain valikon
+valinnan perusteella. Virtuaaliympäristöä ei tarvitse aktivoida käsin.
+Asennus tarvitsee yleensä verkkoyhteyden. Rikkoutunutta virtuaaliympäristöä
+ei poisteta automaattisesti. Jos valmistelua tarvitaan mutta käynnistyksellä
+ei ole vuorovaikutteista terminaalia, se päättyy selkeään toimintaohjeeseen.
+
+Valikkoasennus ohittaa pipin asetustiedostot, jotta niiden kohdeasetukset
+eivät siirrä asennusta pois projektin ympäristöstä. Tarvittavat pakettihakemisto-,
+välityspalvelin- ja sertifikaattiasetukset voi antaa ympäristömuuttujilla,
+esimerkiksi `PIP_INDEX_URL`, `HTTPS_PROXY` ja `PIP_CERT`; nämä säilyvät asennuksessa.
+
+Valikon voi käynnistää myös komennolla `python3 validator_bootstrap.py`.
+macOS- ja Linux-ympäristöissä voit käynnistää tiedoston myös komennolla
+`./SHKanta-www-validator.py`. Vaihtoehtoinen käynnistystapa on edelleen
+`streamlit run SHKanta-www-validator.py`, joka edellyttää valmiiksi asennettuja
+riippuvuuksia. Mahdolliset Streamlitin
+komentoriviargumentit välitetään myös suorasta käynnistyksestä, esimerkiksi
+`python SHKanta-www-validator.py --server.port 8502`.
+
+Ympäristön voi edelleen valmistella käsin:
 
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-python SHKanta-www-validator.py
 ```
 
-Suora Python-käynnistys avaa Streamlit-sovelluksen samassa Python-ympäristössä.
-macOS- ja Linux-ympäristöissä voit käynnistää tiedoston myös komennolla
-`./SHKanta-www-validator.py`. Vaihtoehtoinen käynnistystapa on edelleen
-`streamlit run SHKanta-www-validator.py`. Mahdolliset Streamlitin
-komentoriviargumentit välitetään myös suorasta käynnistyksestä, esimerkiksi
-`python SHKanta-www-validator.py --server.port 8502`.
-
 Sovellus käyttää koodissa määriteltyä, julkaistun käyttöohjeen mukaista
-HTTP-palveluosoitetta. Käynnistys ei asenna paketteja automaattisesti.
+HTTP-palveluosoitetta.
 
 ## Syötteet ja henkilötunnusten tarkistus
 

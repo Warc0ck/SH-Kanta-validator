@@ -4,17 +4,31 @@
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
-import os
 import sys
+
+from validator_bootstrap import launch_from_terminal
+
+
+def _is_streamlit_runtime():
+    """Tunnistaa valmiin Streamlit-ajon tuomatta puuttuvia riippuvuuksia."""
+    loaded_streamlit = sys.modules.get("streamlit")
+    runtime = getattr(loaded_streamlit, "runtime", None)
+    return runtime is not None and runtime.exists()
+
+
+# Valmistelu tapahtuu ennen kolmannen osapuolen tuonteja vain terminaalista.
+if __name__ == "__main__" and not _is_streamlit_runtime():
+    launch_from_terminal(Path(__file__).resolve(), sys.argv[1:])
+    raise SystemExit(0)
 
 try:
     import requests
     import streamlit as st
 except ModuleNotFoundError as exc:
     raise SystemExit(
-        "Riippuvuus puuttuu. Asenna riippuvuudet komennolla "
-        "python -m pip install -r requirements.txt ja käynnistä sovellus "
-        "komennolla python SHKanta-www-validator.py."
+        "Riippuvuus puuttuu. Käynnistä terminaalista komennolla "
+        "python SHKanta-www-validator.py, jotta käynnistysvalikko voi "
+        "valmistella virtuaaliympäristön ja asentaa riippuvuudet."
     ) from exc
 
 from validator_core import prepare_validation_request
@@ -38,6 +52,7 @@ VERSION_HISTORY = (
         "Lisätty suomenkieliset funktiokuvaukset ja korvaustoimintojen regressiotestit.",
         "Korjattu footerin näkyminen sekä tekstin rivitys ja vieritys.",
         "Versiopäivitykset avautuvat nyt ikkunaan, jossa voi selata aiempien versioiden muutoksia.",
+        "Lisätty terminaalin käynnistysvalikko virtuaaliympäristön luontiin ja riippuvuuksien asennukseen.",
     )),
     ("3.2", (
         "Korjattu henkilötunnusten tunnistus ja XML:n käsittely.",
@@ -430,17 +445,11 @@ def main():
 
 
 def _launch():
-    """Käynnistää Streamlitin vain suoraan Pythonista ajettaessa."""
+    """Avaa sovelluksen Streamlit-ajossa tai ohjaa terminaalin valmisteluun."""
     if st.runtime.exists():
         main()
         return
-    command = [
-        sys.executable, "-m", "streamlit", "run",
-        str(Path(__file__).resolve()), *sys.argv[1:],
-    ]
-    # Korvaa käynnistysohjelma Streamlitillä, jotta Ctrl+C pysäyttää yhden
-    # prosessin ilman odottavan Python-prosessin KeyboardInterrupt-jälkeä.
-    os.execv(sys.executable, command)
+    launch_from_terminal(Path(__file__).resolve(), sys.argv[1:])
 
 
 if __name__ == "__main__":

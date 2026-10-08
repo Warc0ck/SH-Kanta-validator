@@ -29,7 +29,7 @@ share/python-wheels/
 .agents/
 AGENTS.md
 output/
-Testiasiakirjat/
+testiasiakirjat/
 
 # Environment variables & secrets
 .env

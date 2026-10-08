@@ -541,8 +541,9 @@ def prepare_validation_request(frame: bytes | str, document: bytes | str) -> tup
         reason for reason in reasons
         if reason.get("codeSystem", "").strip() == SERVICE_REASON_CODE_SYSTEM
     ]
-    # Minimaalinen kehys voi jättää codeSystemin pois. Usean koodin kehyksessä
-    # palvelupyyntö erotetaan käyttötarkoituksesta sen koodistotunnisteella.
+    """Minimaalinen kehys voi jättää codeSystemin pois. Usean koodin kehyksessä
+    palvelupyyntö erotetaan käyttötarkoituksesta sen koodistotunnisteella. 
+    """
     if not service_reasons and len(reasons) == 1 and not reasons[0].get("codeSystem", "").strip():
         service_reasons = reasons
     if len(service_reasons) != 1 or not service_reasons[0].get("code", "").strip():

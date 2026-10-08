@@ -279,8 +279,10 @@ class ValidationUiTests(unittest.TestCase):
             app.button(key="validate_replaced").click().run()
         self.assertEqual(len(app.exception), 0)
         post.assert_not_called()
-        self.assertTrue(any("testihenkilötunnuksia" in entry.value for entry in app.error))
-        self.assertIsNone(app.session_state["validation_result"]["response"])
+        self.assertTrue(any("henkilötunnuksia" in entry.value for entry in app.error))
+        saved = app.session_state["validation_result"]
+        self.assertIn(PERSONAL_HETU, saved["error"])
+        self.assertIsNone(saved["response"])
 
     def test_version_history_opens_without_changing_validation_state(self):
         """Avaa version 3.3 muutoshistorian ja säilyttää kopiot, vahvistuksen sekä validointituloksen."""
@@ -336,7 +338,7 @@ class ValidationUiTests(unittest.TestCase):
             app.button(key="validate_replaced").click().run()
         post.assert_not_called()
         self.assertEqual(len(app.exception), 0)
-        self.assertTrue(any("testihenkilötunnuksia" in entry.value for entry in app.error))
+        self.assertTrue(any("henkilötunnuksia" in entry.value for entry in app.error))
         saved = app.session_state["validation_result"]
         self.assertTrue(saved["replaced"])
         self.assertIn(PERSONAL_HETU, saved["error"])

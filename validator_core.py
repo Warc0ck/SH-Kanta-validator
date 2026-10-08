@@ -520,7 +520,7 @@ def prepare_validation_request(frame: bytes | str, document: bytes | str) -> tup
     for text in (frame_text, document_text, document_xml):
         found.update(find_non_test_hetus(text))
     if found:
-        raise ValueError("Lähetys pysäytettiin: aineisto sisältää muita kuin 9-alkuisia testihenkilötunnuksia: " + ", ".join(sorted(found)))
+        raise ValueError("\n\nVarmista tietosuoja ennen pyynnön lähettämistä eteenpäin.\n\nLähetys pysäytettiin: aineisto sisältää oikeita henkilötunnuksia: " + ", ".join(sorted(found)))
 
     frame_ids = extract_clinical_doc_identifiers(frame_text)
     document_ids = extract_clinical_doc_identifiers(document_xml)

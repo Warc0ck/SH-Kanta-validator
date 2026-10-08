@@ -1,5 +1,17 @@
 # SH-Kanta-validator
 
+Sanomavirheen selvittäminen edellytti poimittujen sanomien lähettämistä
+validointipalveluun ja JSON-muotoisen vastauksen tulkintaa. Toistuvat
+valmistelu- ja tulkintavaiheet veivät aikaa. Tavoitteeni oli tehdä
+tarkistamisesta suoraviivaisempaa ja tuoda virheen selvittämiseen tarvittava
+tieto luettavaan muotoon.
+
+Vastasin työkalun suunnittelusta ja toteutuksesta. Olen myös kehittänyt sitä
+saatujen käyttäjäpalautteiden perusteella. Ratkaisu käyttää olemassa olevaa
+Kannan validointipalvelua, joka arvioi sanoman sisällön. Oma työkaluni
+huolehtii syötteistä, paikallisista ennakkotarkistuksista, palvelupyynnöstä
+ja tuloksen esittämisestä. Se ei korjaa validointivirheitä automaattisesti.
+
 Streamlit-käyttöliittymä Kannan SHARK-validointipalvelulle. Sovellus lukee
 siirtokehyksen ja CDA-asiakirjan, tarkistaa syötteet paikallisesti ja lähettää
 ne käyttäjän käynnistämällä pyynnöllä validointipalveluun.

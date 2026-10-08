@@ -1,4 +1,4 @@
-"""Local regressions for request preparation; all identifiers are synthetic."""
+"""Pyynnön valmistelun regressiotestit synteettisillä tunnisteilla."""
 
 import base64
 import html
@@ -28,12 +28,13 @@ import validator_core  # noqa: E402
 
 
 def synthetic_hetu(date="010100", marker="A", individual=2):
-    """Calculate a fixture instead of copying any person's identifier."""
+    """Laskee synteettisen henkilötunnuksen testiaineistoa varten."""
     number = f"{individual:03d}"
     return f"{date}{marker}{number}{HETU_CHECK_CHARS[int(date + number) % 31]}"
 
 
 def synthetic_hetu_with_check(character):
+    """Etsii synteettisen henkilötunnuksen annetulla tarkistusmerkillä."""
     for individual in range(2, 900):
         candidate = synthetic_hetu(individual=individual)
         if candidate[-1] == character:
@@ -42,12 +43,14 @@ def synthetic_hetu_with_check(character):
 
 
 def b64(text, encoding="utf-8"):
+    """Koodaa tekstin tai tavut Base64-testisyötteeksi."""
     if isinstance(text, str):
         text = text.encode(encoding)
     return base64.b64encode(text).decode("ascii")
 
 
 def document(id_root="1.2.3.4", set_root="1.2.3.5", body=""):
+    """Muodostaa minimaalisen CDA-asiakirjan annetuilla tunnisteilla."""
     return (
         f'<ClinicalDocument xmlns="{HL7_NAMESPACE}">'
         f'<id root="{id_root}"/><setId root="{set_root}"/>'
@@ -56,6 +59,7 @@ def document(id_root="1.2.3.4", set_root="1.2.3.5", body=""):
 
 
 def frame(id_root="1.2.3.4", set_root="1.2.3.5", reason='code="SP1"', body=""):
+    """Muodostaa siirtokehyksen tunnisteiden ja palvelupyynnön testaamiseen."""
     return (
         f'<MCCI_IN000001UV01 xmlns="{HL7_NAMESPACE}">'
         f"<controlActProcess><reasonCode {reason}/>"
@@ -66,7 +70,7 @@ def frame(id_root="1.2.3.4", set_root="1.2.3.5", reason='code="SP1"', body=""):
 
 
 def resolved_xsi_types(source):
-    """Read QName attribute meanings, including nested namespace scopes."""
+    """Selvittää xsi:type-arvojen merkitykset sisäkkäisissä nimiavaruuksissa."""
     pending = []
     scopes = []
     scope = {}
@@ -91,6 +95,7 @@ def resolved_xsi_types(source):
 
 class HetuValidationTests(unittest.TestCase):
     def test_u_and_v_check_characters_are_valid_and_detected(self):
+        """Varmistaa U- ja V-tarkistusmerkkien kelvollisuuden ja tunnistuksen."""
         for check in "UV":
             with self.subTest(check=check):
                 hetu = synthetic_hetu_with_check(check)
@@ -98,11 +103,13 @@ class HetuValidationTests(unittest.TestCase):
                 self.assertEqual({hetu}, set(find_non_test_hetus(hetu)))
 
     def test_lowercase_markers_and_check_characters_are_detected(self):
+        """Varmistaa pienaakkosilla kirjoitettujen henkilötunnusten tunnistuksen."""
         hetu = synthetic_hetu_with_check("V")
         self.assertTrue(is_valid_finnish_hetu(hetu.lower()))
         self.assertEqual({hetu}, {value.upper() for value in find_non_test_hetus(hetu.lower())})
 
     def test_calendar_and_century_are_checked(self):
+        """Varmistaa syntymäpäivän ja vuosisadan kalenteritarkistukset."""
         cases = (
             ("290200", "A", True),  # 2000 is a leap year.
             ("290200", "-", False),  # 1900 is not a leap year.
@@ -118,11 +125,13 @@ class HetuValidationTests(unittest.TestCase):
                 self.assertEqual(valid, is_valid_finnish_hetu(synthetic_hetu(date, marker)))
 
     def test_current_century_markers(self):
+        """Varmistaa kaikkien tuettujen vuosisatamerkkien hyväksynnän."""
         for marker in "ABCDEF-YXWVU+":
             with self.subTest(marker=marker):
                 self.assertTrue(is_valid_finnish_hetu(synthetic_hetu(marker=marker)))
 
     def test_incorrect_check_and_reserved_individual_numbers_rejected(self):
+        """Varmistaa virheellisen tarkistusmerkin ja varattujen yksilönumeroiden hylkäyksen."""
         hetu = synthetic_hetu()
         bad_check = "0" if hetu[-1] != "0" else "1"
         self.assertFalse(is_valid_finnish_hetu(hetu[:-1] + bad_check))
@@ -130,6 +139,7 @@ class HetuValidationTests(unittest.TestCase):
             self.assertFalse(is_valid_finnish_hetu(synthetic_hetu(individual=individual)))
 
     def test_9xx_test_identifiers_are_allowed(self):
+        """Varmistaa 9-alkuisten testihenkilötunnusten hyväksynnän."""
         for individual in (900, 999):
             with self.subTest(individual=individual):
                 hetu = synthetic_hetu(individual=individual)
@@ -140,12 +150,15 @@ class HetuValidationTests(unittest.TestCase):
 
 class StructuredHetuDetectionTests(unittest.TestCase):
     def setUp(self):
+        """Valmistelee synteettisen henkilötunnuksen jokaista tunnistustestiä varten."""
         self.hetu = synthetic_hetu_with_check("V")
 
     def assert_detected(self, source):
+        """Varmistaa, että testihenkilötunnus löytyy annetusta syötteestä."""
         self.assertIn(self.hetu, {value.upper() for value in find_non_test_hetus(source)})
 
     def test_xml_character_references_in_attributes_and_text(self):
+        """Varmistaa henkilötunnuksen tunnistuksen XML:n merkkiviittauksista."""
         encoded = self.hetu.replace("A", "&#65;", 1)
         for source in (
             f'<root value="{encoded}"/>',
@@ -155,6 +168,7 @@ class StructuredHetuDetectionTests(unittest.TestCase):
                 self.assert_detected(source)
 
     def test_leading_xml_comments_and_processing_instructions_do_not_hide_entities(self):
+        """Varmistaa, etteivät XML-kommentit tai käsittelyohjeet piilota henkilötunnusta."""
         encoded = self.hetu.replace("A", "&#65;", 1)
         doc = document(body=f'<patient identifier="{encoded}"/>')
         for prefix in ('<!--validator test comment-->\n', '<?xml-stylesheet href="test.css"?>\n'):
@@ -165,21 +179,25 @@ class StructuredHetuDetectionTests(unittest.TestCase):
                     prepare_validation_request(frame(), source)
 
     def test_json_unicode_escapes(self):
+        """Varmistaa henkilötunnuksen tunnistuksen JSON:n Unicode-merkintöjen läpi."""
         encoded = self.hetu.replace("A", r"\u0041", 1)
         self.assert_detected('{"identifier":"' + encoded + '"}')
 
     def test_json_scalar_string_unicode_escapes(self):
+        """Varmistaa henkilötunnuksen tunnistuksen JSON-merkkijonoista ja niiden XML-kääreistä."""
         encoded = self.hetu.replace("A", r"\u0041", 1)
         self.assert_detected('"' + encoded + '"')
         self.assert_detected('<root><text>"' + encoded + '"</text></root>')
 
     def test_short_base64_identifier_in_json(self):
+        """Varmistaa lyhyen Base64-koodatun henkilötunnuksen tunnistuksen JSON:sta."""
         encoded = b64(self.hetu)
         self.assertEqual(16, len(encoded))
         self.assert_detected(json.dumps({"data": encoded}))
         self.assertIn(self.hetu, extract_base64_contents(json.dumps({"data": encoded})))
 
     def test_known_xml_base64_fields_and_cdata(self):
+        """Varmistaa tunnistuksen tunnetuista XML:n Base64-kentistä ja CDATA-sisällöstä."""
         encoded = b64(self.hetu)
         sources = (
             f'<root><text representation="B64">{encoded}</text></root>',
@@ -192,23 +210,27 @@ class StructuredHetuDetectionTests(unittest.TestCase):
                 self.assert_detected(source)
 
     def test_utf16_base64_identifier(self):
+        """Varmistaa UTF-16-muotoisen henkilötunnuksen tunnistuksen Base64-sisällöstä."""
         for encoding in ("utf-16", "utf-16le", "utf-16be"):
             with self.subTest(encoding=encoding):
                 self.assert_detected(json.dumps({"data": b64(self.hetu, encoding)}))
 
     def test_nested_base64_json_and_cdata(self):
+        """Varmistaa tunnistuksen sisäkkäisistä Base64-, JSON- ja CDATA-sisällöistä."""
         wrapped = json.dumps({"data": b64(self.hetu)})
         self.assert_detected(f'<root><text representation="B64">{b64(wrapped)}</text></root>')
         self.assert_detected(f"<root><![CDATA[{wrapped}]]></root>")
         self.assert_detected(f"<root>&lt;![CDATA[{wrapped}]]&gt;</root>")
 
     def test_uninspectable_explicit_binary_base64_blocks_request(self):
+        """Varmistaa, että tarkistamaton binäärinen Base64-sisältö estää lähetyksen."""
         binary = b64(b"\x00\xff\x89\x00")
         doc = document(body=f'<text representation="B64">{binary}</text>')
         with self.assertRaises(ValueError):
             prepare_validation_request(frame(), doc)
 
     def test_binary_media_type_inherited_from_nonxmlbody_blocks_request(self):
+        """Varmistaa, että nonXMLBody-elementin binäärinen mediatyyppi estää lähetyksen."""
         encoded = b64("benign ASCII attachment")
         body = (
             '<nonXMLBody mediaType="application/pdf">'
@@ -218,12 +240,14 @@ class StructuredHetuDetectionTests(unittest.TestCase):
             prepare_validation_request(frame(), document(body=body))
 
     def test_malformed_explicit_base64_is_not_silently_cleaned(self):
+        """Varmistaa, ettei virheellistä Base64-sisältöä korjata huomaamatta."""
         encoded = "%" + b64(self.hetu)
         doc = document(body=f'<text representation="B64">{encoded}</text>')
         with self.assertRaises(ValueError):
             prepare_validation_request(frame(), doc)
 
     def test_depth_limit_never_silently_hides_identifier(self):
+        """Varmistaa, että syvyysrajan ylitys tunnistetaan tai estää käsittelyn."""
         wrapped = self.hetu
         for _ in range(8):
             wrapped = json.dumps({"data": b64(wrapped)})
@@ -234,6 +258,7 @@ class StructuredHetuDetectionTests(unittest.TestCase):
         self.assertIn(self.hetu, {value.upper() for value in found})
 
     def test_attachment_count_limit_blocks_incomplete_inspection(self):
+        """Varmistaa, että liitemäärän ylitys estää puutteellisen tarkistuksen."""
         source = json.dumps({
             "first": {"encoding": "B64", "data": b64("benign attachment one")},
             "second": {"encoding": "B64", "data": b64(self.hetu)},
@@ -243,6 +268,7 @@ class StructuredHetuDetectionTests(unittest.TestCase):
                 find_non_test_hetus(source)
 
     def test_expanded_text_and_attachment_size_limits_block_inspection(self):
+        """Varmistaa puretun tekstin ja liitteiden kokorajojen valvonnan."""
         source = "<root><text>benign text content</text></root>"
         with patch.object(validator_core, "MAX_EXPANDED_CHARS", len(source) + 1):
             with self.assertRaises(ValueError):
@@ -255,6 +281,7 @@ class StructuredHetuDetectionTests(unittest.TestCase):
 
 class ClinicalDocumentTests(unittest.TestCase):
     def test_attribute_order_and_newlines_do_not_change_recognition(self):
+        """Varmistaa, etteivät attribuuttien järjestys tai rivinvaihdot muuta CDA-tunnistusta."""
         source = (
             '<ClinicalDocument classCode="DOCCLIN"\n'
             f' xmlns="{HL7_NAMESPACE}"><id root="1.2.3.4"/>'
@@ -264,6 +291,7 @@ class ClinicalDocumentTests(unittest.TestCase):
         self.assertEqual(f"{{{HL7_NAMESPACE}}}ClinicalDocument", parsed.tag)
 
     def test_namespace_inherited_from_wrapper(self):
+        """Varmistaa, että CDA-asiakirja perii ympäröivän elementin nimiavaruuden."""
         source = (
             f'<wrapper xmlns="{HL7_NAMESPACE}"><ClinicalDocument>'
             '<id root="1.2.3.4"/><setId root="1.2.3.5"/>'
@@ -274,6 +302,7 @@ class ClinicalDocumentTests(unittest.TestCase):
         self.assertEqual(("1.2.3.4", "1.2.3.5"), extract_clinical_doc_identifiers(source))
 
     def test_wrapper_tail_text_is_excluded_from_standalone_document(self):
+        """Varmistaa, ettei kääreen jälkiteksti päädy erotettuun CDA-asiakirjaan."""
         source = (
             f'<wrapper xmlns="{HL7_NAMESPACE}"><ClinicalDocument>'
             '<id root="1.2.3.4"/><setId root="1.2.3.5"/>'
@@ -285,6 +314,7 @@ class ClinicalDocumentTests(unittest.TestCase):
         self.assertNotIn("wrapper trailing text", result)
 
     def test_incidental_xml_like_trace_text_does_not_block_valid_base64_document(self):
+        """Varmistaa, ettei jäljitystekstin XML:ää muistuttava osa estä Base64-asiakirjan käsittelyä."""
         original = document(body="<text>ääkköset</text>")
         source = (
             "<trace><message>&lt;not-an-xml</message>"
@@ -296,6 +326,7 @@ class ClinicalDocumentTests(unittest.TestCase):
         self.assertEqual("ääkköset", parsed.find(f"{{{HL7_NAMESPACE}}}text").text)
 
     def test_embedded_document_preserves_unqualified_children_and_rebound_qnames(self):
+        """Varmistaa nimiavaruudettomien lasten ja paikallisten QName-määritysten säilymisen."""
         source = (
             f'<trace xmlns="{HL7_NAMESPACE}" '
             'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
@@ -322,6 +353,7 @@ class ClinicalDocumentTests(unittest.TestCase):
         self.assertEqual(expected_types, resolved_xsi_types(result))
 
     def test_self_closing_embedded_document_is_standalone_and_parseable(self):
+        """Varmistaa tyhjän sisäkkäisen CDA-elementin erottamisen kelvolliseksi XML:ksi."""
         source = f'<trace xmlns="{HL7_NAMESPACE}"><ClinicalDocument/>wrapper tail</trace>'
         result = ensure_clinical_document_xml(source, verbose=False)
         parsed = ET.fromstring(result)
@@ -329,6 +361,7 @@ class ClinicalDocumentTests(unittest.TestCase):
         self.assertNotIn("wrapper tail", result)
 
     def test_malformed_wrong_namespace_and_false_names_are_rejected(self):
+        """Varmistaa virheellisten ja moniselitteisten CDA-asiakirjojen hylkäyksen."""
         sources = (
             f'<ClinicalDocument xmlns="{HL7_NAMESPACE}">',
             f'<!-- <ClinicalDocument xmlns="{HL7_NAMESPACE}"/> -->',
@@ -343,6 +376,7 @@ class ClinicalDocumentTests(unittest.TestCase):
                     ensure_clinical_document_xml(source, verbose=False)
 
     def test_document_base64_and_actual_or_escaped_cdata(self):
+        """Varmistaa CDA-asiakirjan poiminnan Base64- ja CDATA-esitysmuodoista."""
         original = document(body="<text>ääkköset</text>")
         sources = (
             b64(original),
@@ -358,10 +392,12 @@ class ClinicalDocumentTests(unittest.TestCase):
                 self.assertEqual("ääkköset", parsed.find(f"{{{HL7_NAMESPACE}}}text").text)
 
     def test_base64_with_arbitrary_garbage_is_rejected(self):
+        """Varmistaa ylimääräisiä merkkejä sisältävän Base64-syötteen hylkäyksen."""
         with self.assertRaises(ValueError):
             ensure_clinical_document_xml("!" + b64(document()) + "!", verbose=False)
 
     def test_existing_base64_input_variants_remain_supported(self):
+        """Varmistaa tuettujen Base64-muunnelmien ja rivitetyn sisällön käsittelyn."""
         original = document(body="<text>ääkköset 🙂</text>")
         encoded = b64(original)
         wrapped = "\n".join(encoded[index:index + 64] for index in range(0, len(encoded), 64))
@@ -377,6 +413,7 @@ class ClinicalDocumentTests(unittest.TestCase):
                 self.assertEqual("ääkköset 🙂", parsed.find(f"{{{HL7_NAMESPACE}}}text").text)
 
     def test_declared_iso8859_and_bomless_utf16(self):
+        """Varmistaa ISO-8859-1:n ja ilman tavujärjestysmerkkiä annetun UTF-16:n käsittelyn."""
         original = document(body="<text>ääkköset</text>")
         iso_doc = ('<?xml version="1.0" encoding="ISO-8859-1"?>' + original).encode("iso-8859-1")
         self.assertIn("ääkköset", _to_text_helper(iso_doc))
@@ -388,6 +425,7 @@ class ClinicalDocumentTests(unittest.TestCase):
                 self.assertIn("ääkköset", ensure_clinical_document_xml(source, verbose=False))
 
     def test_invalid_or_unknown_encoding_is_rejected(self):
+        """Varmistaa virheellisen merkistön ja tuntemattoman merkistönimen hylkäyksen."""
         sources = (
             b'<?xml version="1.0" encoding="UTF-8"?><ClinicalDocument>\xff</ClinicalDocument>',
             b'<?xml version="1.0" encoding="not-a-real-codec"?><ClinicalDocument/>',
@@ -400,6 +438,7 @@ class ClinicalDocumentTests(unittest.TestCase):
 
 class RequestPreparationTests(unittest.TestCase):
     def test_payload_has_unique_uuid_and_single_declaration(self):
+        """Varmistaa pyynnön yksilöllisen UUID:n ja yhden XML-alkumäärittelyn."""
         source = '<?xml version="1.0" encoding="UTF-8"?>' + document()
         first, checks = prepare_validation_request(frame(), source)
         second, _ = prepare_validation_request(frame(), source)
@@ -413,6 +452,7 @@ class RequestPreparationTests(unittest.TestCase):
         self.assertEqual({"1.2.3.4", "1.2.3.5"}, {value for _, value in checks})
 
     def test_outgoing_xml_always_has_one_declaration_and_lf_line_endings(self):
+        """Varmistaa yhden XML-alkumäärittelyn ja LF-rivinvaihdot lähetettävässä XML:ssä."""
         declarations = (
             "",
             '<?xml version="1.0"?>\r\n',
@@ -434,6 +474,7 @@ class RequestPreparationTests(unittest.TestCase):
     def test_line_normalization_preserves_base64_bytes_and_json_values(self):
         # The encoded attachment's own CRLF bytes must stay unchanged. Only
         # XML whitespace surrounding/wrapping its Base64 text is normalized.
+        """Varmistaa, että rivinvaihtojen yhtenäistäminen säilyttää liitteet ja JSON-arvot."""
         attachment = '<html xmlns="http://www.w3.org/1999/xhtml">\r\n<body>ääkköset &amp; teksti</body>\r\n</html>'
         encoded = b64(attachment)
         wrapped = "\n".join(encoded[index:index + 24] for index in range(0, len(encoded), 24))
@@ -465,6 +506,7 @@ class RequestPreparationTests(unittest.TestCase):
                 self.assertEqual(json_value, json.loads(parsed.find(f"{{{HL7_NAMESPACE}}}value").text))
 
     def test_outgoing_normalization_preserves_namespace_scopes_and_body_order(self):
+        """Varmistaa nimiavaruuksien ja elementtijärjestyksen säilymisen normalisoinnissa."""
         source = (
             f'<ClinicalDocument xmlns="{HL7_NAMESPACE}" '
             'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
@@ -490,6 +532,7 @@ class RequestPreparationTests(unittest.TestCase):
         self.assertEqual("viimeinen <teksti>", parsed[-1].text)
 
     def test_oid_mismatches_and_absent_roots_block_request(self):
+        """Varmistaa, että ristiriitaiset tai puuttuvat OID-tunnisteet estävät lähetyksen."""
         pairs = (
             (frame(id_root="1.2.3.99"), document()),
             (frame(set_root="1.2.3.99"), document()),
@@ -506,6 +549,7 @@ class RequestPreparationTests(unittest.TestCase):
                     prepare_validation_request(frame_source, doc_source)
 
     def test_reason_code_missing_empty_or_whitespace_blocks_request(self):
+        """Varmistaa, että puuttuva tai tyhjä palvelupyyntökoodi estää lähetyksen."""
         for reason in ("", 'code=""', 'code="   "'):
             with self.subTest(reason=reason):
                 with self.assertRaises(ValueError):
@@ -514,6 +558,7 @@ class RequestPreparationTests(unittest.TestCase):
             prepare_validation_request(frame().replace('<reasonCode code="SP1"/>', ""), document())
 
     def test_service_reason_code_selected_independently_of_purpose_and_order(self):
+        """Varmistaa palvelupyyntökoodin valinnan käyttötarkoituksesta ja järjestyksestä riippumatta."""
         purpose = '<reasonCode code="1" codeSystem="1.2.246.537.6.1289.201901"/>'
         for service_code in ("SP1", "SP17"):
             service = (
@@ -527,6 +572,7 @@ class RequestPreparationTests(unittest.TestCase):
                     self.assertEqual(service_code, payload["palveluPyynto"])
 
     def test_purpose_only_or_missing_service_code_blocks_request(self):
+        """Varmistaa, ettei käyttötarkoituskoodi korvaa puuttuvaa palvelupyyntökoodia."""
         purpose = '<reasonCode code="1" codeSystem="1.2.246.537.6.1289.201901"/>'
         missing_services = (
             "",
@@ -541,6 +587,7 @@ class RequestPreparationTests(unittest.TestCase):
                     prepare_validation_request(source, document())
 
     def test_multiple_service_reason_codes_block_request(self):
+        """Varmistaa, että useat palvelupyyntökoodit estävät lähetyksen."""
         reasons = (
             '<reasonCode code="SP1" codeSystem="1.2.246.537.6.1503.201601"/>'
             '<reasonCode code="1" codeSystem="1.2.246.537.6.1289.201901"/>'
@@ -551,15 +598,18 @@ class RequestPreparationTests(unittest.TestCase):
             prepare_validation_request(source, document())
 
     def test_malformed_frame_blocks_request(self):
+        """Varmistaa, että virheellinen siirtokehyksen XML estää lähetyksen."""
         with self.assertRaises(ValueError):
             prepare_validation_request(frame()[:-1], document())
 
     def test_input_size_limit_blocks_request(self):
+        """Varmistaa, että syötteen kokorajan ylitys estää lähetyksen."""
         with patch.object(validator_core, "MAX_INPUT_CHARS", 16):
             with self.assertRaises(ValueError):
                 prepare_validation_request(frame(), document())
 
     def test_non_test_identifier_in_either_input_blocks_request(self):
+        """Varmistaa, että tavallinen henkilötunnus kummassa tahansa syötteessä estää lähetyksen."""
         hetu = synthetic_hetu_with_check("U")
         pairs = (
             (frame(body=f"<text>{hetu}</text>"), document()),
@@ -572,6 +622,7 @@ class RequestPreparationTests(unittest.TestCase):
                     prepare_validation_request(frame_source, doc_source)
 
     def test_latin1_and_utf16_content_survives_utf8_serialization(self):
+        """Varmistaa Latin-1- ja UTF-16-sisältöjen säilymisen UTF-8-pyynnössä."""
         doc_text = document(body='<text language="fi">ääkköset &amp; öljy</text>')
         frame_text = frame(body="<text>lähetys</text>")
         for encoding in ("iso-8859-1", "utf-16le", "utf-16be"):

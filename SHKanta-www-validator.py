@@ -18,10 +18,38 @@ except ModuleNotFoundError as exc:
     ) from exc
 
 from validator_core import prepare_validation_request
+from validator_replacer import (
+    encode_document_json_for_sending,
+    prepare_document_for_inspection,
+    replace_validation_inputs,
+)
 from validator_response import interpret_response
 
 VALIDATOR_URL = "http://shvalidaattori.at.kanta.fi/shark-validointi/validoi/asiakirja/tulos"
 RESULT_KEY = "validation_result"
+REPLACEMENT_KEY = "replaced_inputs"
+CONFIRMATION_KEY = "replacement_confirmed"
+APP_VERSION = "3.3"
+VERSION_HISTORY = (
+    ("3.3", (
+        "Lisätty henkilötietokenttien paikallinen korvaus XML- ja JSON-sisältöihin sekä XHTML-näyttömuodon tyhjennys.",
+        "Korvatut sanomat voi tarkistaa ja ladata XML-tiedostoina. Lähetys vaatii tarkistusvahvistuksen.",
+        "Asiakirjan JSON näkyy tarkistus-XML:ssä purettuna ja sisennettynä. Se koodataan Base64-muotoon ennen lähetystä.",
+        "Lisätty suomenkieliset funktiokuvaukset ja korvaustoimintojen regressiotestit.",
+        "Korjattu footerin näkyminen sekä tekstin rivitys ja vieritys.",
+        "Versiopäivitykset avautuvat nyt ikkunaan, jossa voi selata aiempien versioiden muutoksia.",
+    )),
+    ("3.2", (
+        "Korjattu henkilötunnusten tunnistus ja XML:n käsittely.",
+        "Lisätty lähetyksen estävät tunniste- ja palvelupyyntötarkistukset.",
+        "Validointitulokset ja ladattavat raportit säilyvät näkymässä.",
+    )),
+    ("3.0", (
+        "Siirretty verkkoselaimessa toimivaksi Streamlit-sovellukseksi.",
+        "Base64/JSON/nonXMLBody-tarkistus etsii henkilötunnuksia XML:stä ja koodatuista tekstisisällöistä.",
+        "OID-tarkistus vertailee kehyksen ja asiakirjan id/@root- ja setId/@root-tunnisteita.",
+    )),
+)
 
 
 def _input_signature(frame_source, document_source):
@@ -34,11 +62,12 @@ def _input_signature(frame_source, document_source):
     return digest.hexdigest()
 
 
-def _run_validation(frame_source, document_source, signature, source_names):
+def _run_validation(frame_source, document_source, signature, source_names, *, replaced=False):
     """Tekee paikalliset tarkistukset ennen yhtä HTTP-pyyntöä."""
     saved = {
         "signature": signature,
         "source_names": source_names,
+        "replaced": replaced,
         "file_date": datetime.now().strftime("%d%m%y"),
         "checks": [],
         "reason_code": None,
@@ -49,6 +78,7 @@ def _run_validation(frame_source, document_source, signature, source_names):
         saved["error"] = "Syötä molemmat XML-sanomat ennen validoinnin aloittamista."
         return saved
     try:
+        document_source = encode_document_json_for_sending(document_source)
         payload, checks = prepare_validation_request(frame_source, document_source)
     except ValueError as exc:
         saved["error"] = f"⛔ Validointi pysäytetty: {exc}"
@@ -81,6 +111,8 @@ def _render_result(saved, current_signature):
     sources = " / ".join(name for name in saved["source_names"] if name)
     if sources:
         st.caption(f"Validoidut syötteet: {sources}")
+    if saved.get("replaced"):
+        st.caption("Validointi tehtiin korvatuilla sanomilla.")
     for label, value in saved["checks"]:
         st.success(f"✅ ClinicalDocument {label} (@root) täsmää: `{value}`")
     if saved["reason_code"]:
@@ -122,8 +154,100 @@ def _render_result(saved, current_signature):
     )
 
 
+def _replacement_filename(source_name, fallback):
+    """Muodostaa korvatun XML:n latausnimen alkuperäisen tiedoston nimestä."""
+    stem = Path(source_name).stem if source_name and source_name.lower().endswith(".xml") else fallback
+    return f"{stem}_korvattu.xml"
+
+
+def _prepare_replacements(frame_source, document_source, signature, source_names):
+    """Muodostaa paikalliset XML-kopiot ja liittää ne alkuperäisiin syötteisiin."""
+    if not frame_source or not document_source:
+        raise ValueError("Syötä molemmat XML-sanomat ennen henkilötietokenttien korvaamista.")
+    frame_xml, document_xml = replace_validation_inputs(frame_source, document_source)
+    return {
+        "signature": signature,
+        "frame_xml": frame_xml,
+        "document_xml": prepare_document_for_inspection(document_xml),
+        "source_names": (
+            _replacement_filename(source_names[0], "kehys"),
+            _replacement_filename(source_names[1], "asiakirja"),
+        ),
+    }
+
+
+def confirm_sending():
+    """Pyytää käyttäjää vahvistamaan korvattujen sanomien tarkistuksen ennen lähetystä."""
+    return st.checkbox(
+        "Olen tarkistanut korvatut sanomat ja varmistanut, ettei niissä ole henkilötietoja.",
+        key=CONFIRMATION_KEY,
+    )
+
+
+def _render_replacements(replaced, current_signature):
+    """Näyttää korvatut XML:t ja tarjoaa latauksen sekä vahvistetun validoinnin."""
+    with st.container(border=True):
+        st.subheader("Korvatut sanomat")
+        st.warning(
+            "Korvaus koskee tunnettuja henkilötietokenttiä. "
+            "Tarkista myös vapaateksti ja liitteet ennen lähettämistä."
+        )
+        st.caption(
+            "Asiakirjan JSON näkyy tarkistus-XML:ssä purettuna ja sisennettynä. "
+            "JSON koodataan automaattisesti Base64-muotoon ennen validointipalveluun lähettämistä."
+        )
+        wrap_lines = st.session_state.get("rivitys", False)
+        for label, field, filename, key in (
+            ("Siirtokehys", "frame_xml", replaced["source_names"][0], "download_replaced_frame"),
+            ("Asiakirja", "document_xml", replaced["source_names"][1], "download_replaced_document"),
+        ):
+            st.caption(label)
+            st.code(replaced[field], language="xml", height=250, wrap_lines=wrap_lines)
+            st.download_button(
+                f"Lataa korvattu {label.lower()} (.xml)",
+                data=replaced[field].encode("utf-8"), file_name=filename,
+                mime="application/xml", on_click="ignore", key=key,
+            )
+        confirmed = confirm_sending()
+        if st.button("Validoi korvatut sanomat", key="validate_replaced", disabled=not confirmed):
+            if confirmed and replaced["signature"] == current_signature:
+                st.session_state[RESULT_KEY] = _run_validation(
+                    replaced["frame_xml"], replaced["document_xml"], current_signature,
+                    replaced["source_names"], replaced=True,
+                )
+
+
+@st.dialog("Versiopäivitykset", width="large")
+def _show_version_history():
+    """Avaa selattavan muutoshistorian uusimmasta versiosta vanhimpaan."""
+    st.caption(f"Nykyinen versio {APP_VERSION}. Avaa aiempi versio nähdäksesi sen muutokset.")
+    for version, changes in VERSION_HISTORY:
+        with st.expander(f"Versio {version}", expanded=version == APP_VERSION):
+            st.markdown("\n".join(f"- {change}" for change in changes))
+
+
+def _render_footer():
+    """Näyttää kiinteän footerin ja muutoshistoriaikkunan avaavan painikkeen."""
+    with st.container(key="app_footer", horizontal_alignment="center", gap="xxsmall"):
+        st.caption(
+            "Tomi Vesala, 2024. Kanta-sanomien validointityökalu. Ei virallinen Kanta-tuote.",
+            text_alignment="center",
+        )
+        with st.container(
+            horizontal=True, horizontal_alignment="center", vertical_alignment="center", gap="small",
+        ):
+            st.caption("Päivitetty 08.10.2026", width="content")
+            history_clicked = st.button(
+                f"Versiopäivitykset (v{APP_VERSION})", key="version_history",
+                type="tertiary", icon=":material/history:",
+            )
+    if history_clicked:
+        _show_version_history()
+
+
 # === Apufunktio: XML-syöte tiedostona tai liitettynä tekstinä ===
 def xml_syote(otsikko: str, key: str):
+    """Lukee yhden XML-syötteen tiedostona tai tekstinä ja palauttaa sen nimen."""
     with st.container(border=True):
         st.markdown(f"**{otsikko}**")
 
@@ -159,6 +283,7 @@ def xml_syote(otsikko: str, key: str):
 
 # === Rivityksen valintaruutu ===
 def rivitysvalinta():
+    """Tarjoaa rivitysvalinnan ja soveltaa sen XML-tekstikenttiin."""
     rivita = st.checkbox(
         "Rivitä teksti",
         value=False,
@@ -177,11 +302,12 @@ def rivitysvalinta():
 
 # === Päätoiminto rakennettu Streamlit-verkkokäyttöliittymäksi ===
 def main():
-    st.set_page_config(page_title="SOSH Kanta validointityökalu 3.2", layout="centered")
+    """Rakentaa validoinnin ja paikallisen henkilötietokenttien korvauksen näkymän."""
+    st.set_page_config(page_title=f"SOSH Kanta validointityökalu {APP_VERSION}", layout="centered")
 
     footer_html = """
     <style>
-    .custom-footer {
+    .st-key-app_footer {
         position: fixed;
         left: 0;
         bottom: 0;
@@ -189,50 +315,19 @@ def main():
         background-color: #262730;
         color: #f1f1f1;
         text-align: center;
-        padding: 8px 0;
+        padding: 6px 12px;
         font-size: 13px;
         border-top: 1px solid #262730;
-        z-index: 9999;
+        z-index: 50;
+        box-sizing: border-box;
     }
-    .tooltip-container {
-        position: relative;
-        display: inline-block;
-        cursor: pointer;
-        margin-left: 10px;
-        color: #0066cc;
-        font-weight: bold;
-    }
-    .tooltip-box {
-        visibility: hidden;
-        width: 340px;
-        background-color: #2b2b2b;
-        color: #ffffff;
-        text-align: left;
-        border-radius: 6px;
-        padding: 12px;
-        position: absolute;
-        z-index: 10000;
-        bottom: 140%;
-        left: 50%;
-        transform: translateX(-50%);
-        opacity: 0;
-        transition: opacity 0.3s, visibility 0.3s;
-        font-size: 12px;
-        line-height: 1.5;
-        box-shadow: 0px 4px 12px rgba(0,0,0,0.3);
-        font-weight: normal;
-    }
-    .tooltip-box ul {
-        margin: 5px 0 0 15px;
-        padding: 0;
-    }
-    .tooltip-container:hover .tooltip-box {
-        visibility: visible;
-        opacity: 1;
+    .st-key-app_footer [data-testid="stCaptionContainer"],
+    .st-key-app_footer button {
+        color: #f1f1f1;
     }
     .block-container,
     [data-testid="stMainBlockContainer"] {
-        padding-bottom: 60px;
+        padding-bottom: 120px;
         max-width: 1200px !important;
     }
     [data-testid="stTextArea"] textarea {
@@ -274,31 +369,8 @@ def main():
     }
 
     </style>
-    <div class="custom-footer">
-        Tomi Vesala, 2024. Kanta-sanomien validointityökalu. Ei virallinen Kanta-tuote.<br/>
-        Päivitetty 08.10.2026
-        <span class="tooltip-container">
-            ℹ️ Versiopäivitykset (v3.2)
-            <div class="tooltip-box">
-                <strong>Versiossa 3.2 tehdyt muutokset:</strong>
-                <ul>
-                    <li>Korjattu henkilötunnusten tunnistus ja XML:n käsittely.</li>
-                    <li>Lisätty lähetyksen estävät tunniste- ja palvelupyyntötarkistukset.</li>
-                    <li>Validointitulokset ja ladattavat raportit säilyvät näkymässä.</li>
-                </ul>
-                <strong>Versiossa 3.0 tehdyt muutokset:</strong>
-                <ul>
-                    <li>Siirretty verkkoselaimessa toimivaksi (Streamlit).</li>
-                    <li><strong>Base64/JSON/nonXMLBody-tarkistus:</strong> Etsii henkilötunnuksia XML:stä ja koodatuista tekstisisällöistä.</li>
-                    <li><strong>OID-tarkistus:</strong> Vertailee kehyksen ja asiakirjan <code>id/@root</code> ja <code>setId/@root</code> tunnisteet.</li>
-                </ul>
-            </div>
-        </span>
-    </div>
     """
-    st.markdown("""<h1 style=\"text-align: center;\">SOSH Kanta validointityökalu 3.2</h1>""", unsafe_allow_html=True)
-
-    # st.title("SOSH Kanta validointityökalu 3.2")
+    st.markdown(f"<h1 style=\"text-align: center;\">SOSH Kanta validointityökalu {APP_VERSION}</h1>", unsafe_allow_html=True)
     
     st.divider()
         
@@ -319,18 +391,42 @@ def main():
     asiakirja_source, asiakirja_filename = xml_syote("2. Trace message xml tai DocumentXML (asiakirja)", "asiakirja")
 
     signature = _input_signature(siirtokehys_source, asiakirja_source)
-    if st.button("Suorita validointi", type="primary"):
-        st.session_state[RESULT_KEY] = _run_validation(
-            siirtokehys_source, asiakirja_source, signature,
-            (kehys_nimi, asiakirja_filename),
-        )
+    replaced = st.session_state.get(REPLACEMENT_KEY)
+    if replaced is not None and replaced["signature"] != signature:
+        st.session_state.pop(REPLACEMENT_KEY)
+        st.session_state[CONFIRMATION_KEY] = False
+        st.info("Syötteet ovat muuttuneet. Muodosta korvatut sanomat uudelleen.")
+
+    with st.container(horizontal=True):
+        if st.button("Suorita validointi", type="primary", key="validate_original"):
+            st.session_state[RESULT_KEY] = _run_validation(
+                siirtokehys_source, asiakirja_source, signature,
+                (kehys_nimi, asiakirja_filename),
+            )
+        replace_clicked = st.button("Korvaa henkilötietokentät", key="replace_personal_data")
+
+    if replace_clicked:
+        st.session_state.pop(REPLACEMENT_KEY, None)
+        st.session_state[CONFIRMATION_KEY] = False
+        try:
+            st.session_state[REPLACEMENT_KEY] = _prepare_replacements(
+                siirtokehys_source, asiakirja_source, signature,
+                (kehys_nimi, asiakirja_filename),
+            )
+        except ValueError as exc:
+            st.error(f"Henkilötietokenttien korvaus pysäytetty: {exc}")
+
+    replaced = st.session_state.get(REPLACEMENT_KEY)
+    if replaced is not None:
+        _render_replacements(replaced, signature)
 
     saved = st.session_state.get(RESULT_KEY)
     if saved is not None:
         _render_result(saved, signature)
 
-    # Renderöi footer HTML:nä, jotta CSS:n tyhjät rivit eivät katkaise sitä.
+    # Renderöi tyylit erikseen, jotta CSS:n tyhjät rivit eivät katkaise niitä.
     st.html(footer_html)
+    _render_footer()
 
 
 def _launch():

@@ -1,4 +1,4 @@
-"""Interpret validator replies without network or Streamlit dependencies."""
+"""Tulkitsee validointipalvelun vastaukset ilman verkko- tai Streamlit-riippuvuuksia."""
 
 from dataclasses import dataclass
 import json
@@ -7,7 +7,7 @@ import re
 
 @dataclass(frozen=True)
 class ValidationResult:
-    """A displayable result and the original response's download metadata."""
+    """Sisältää näytettävän tuloksen ja alkuperäisen vastauksen lataustiedot."""
 
     status_code: int
     success: bool
@@ -20,7 +20,7 @@ class ValidationResult:
 
 
 def _format_description(description: str, reason_code: str) -> str | None:
-    """Keep existing line breaks and make semicolon-separated errors readable."""
+    """Säilyttää rivinvaihdot ja erottaa puolipisteellä erotellut virheet omille riveilleen."""
     description = description.replace("\r\n", "\n").replace("\r", "\n")
     description = re.sub(r"[ \t]+", " ", description)
     description = re.sub(r";[ \t]*(?:\n[ \t]*)*", ";\n", description)
@@ -34,11 +34,11 @@ def _format_description(description: str, reason_code: str) -> str | None:
 def interpret_response(
     status_code: int, content_type: str, body: str, reason_code: str
 ) -> ValidationResult:
-    """Interpret any response body safely and preserve it for display/download.
+    """Tulkitsee vastauksen turvallisesti ja säilyttää sen näyttämistä ja lataamista varten.
 
-    The service documents successful validation as HTTP 200 with an empty body.
-    HTML is returned as text here; callers must never render it as active HTML.
-    Valid JSON is formatted regardless of its root type or declared media type.
+    Onnistuneen validoinnin vastaus on ohjeen mukaan tyhjä HTTP 200 -vastaus.
+    HTML palautetaan tekstinä, ja kutsujan on näytettävä se tekstinä.
+    Kelvollinen JSON muotoillaan juurityypistä ja ilmoitetusta mediatyypistä riippumatta.
     """
     if status_code == 200 and not body.strip():
         return ValidationResult(
@@ -106,7 +106,7 @@ def interpret_response(
     try:
         response_text = json.dumps(decoded, indent=4, ensure_ascii=False)
     except (ValueError, RecursionError):
-        # Preserve a parseable response even if pretty-printing exceeds limits.
+        # Säilytetään jäsennettävä vastaus, vaikka muotoilu ylittäisi käsittelyn rajat.
         response_text = body
 
     return ValidationResult(

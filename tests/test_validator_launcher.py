@@ -1,4 +1,4 @@
-"""Verify direct launch handoff and Streamlit runtime dispatch."""
+"""Suoran käynnistyksen ja Streamlit-ajon välisen siirtymän testit."""
 
 from pathlib import Path
 import runpy
@@ -13,9 +13,11 @@ APP = Path(__file__).resolve().parents[1] / "SHKanta-www-validator.py"
 class LauncherTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        """Lataa käynnistimen nimiavaruuden testejä varten käynnistämättä sovellusta."""
         cls.namespace = runpy.run_path(str(APP), run_name="validator_launcher_test")
 
     def test_direct_launch_replaces_process_and_preserves_arguments(self):
+        """Varmistaa suoran käynnistyksen siirtymisen Streamlitiin argumentit säilyttäen."""
         launch = self.namespace["_launch"]
         arguments = [str(APP), "--server.headless=true", "--server.port=8767"]
         with (
@@ -30,6 +32,7 @@ class LauncherTests(unittest.TestCase):
         )
 
     def test_streamlit_runtime_runs_app_without_relaunching(self):
+        """Varmistaa sovelluksen käynnistymisen jo olemassa olevassa Streamlit-ajossa."""
         launch = self.namespace["_launch"]
         with (
             patch("streamlit.runtime.exists", return_value=True),

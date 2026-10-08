@@ -44,6 +44,7 @@ _XML_START = re.compile(r"^<")
 
 
 def _declared_encoding(text: str) -> str | None:
+    """Lukee XML-ilmoituksen merkistön, jos ilmoitus sisältää encoding-attribuutin."""
     declaration = _XML_DECLARATION.match(text)
     if declaration:
         match = _ENCODING_ATTRIBUTE.search(declaration.group(0))
@@ -130,6 +131,7 @@ def is_valid_finnish_hetu(hetu: str) -> bool:
 
 
 def _parse_xml(text: str, label: str = "XML") -> ET.Element:
+    """Jäsentää kokorajan alittavan XML:n ja estää DTD- ja ENTITY-määrittelyt."""
     if len(text) > MAX_INPUT_CHARS:
         raise ValueError(f"{label} ylittää paikallisen käsittelyn kokorajan.")
     if re.search(r"<!\s*(?:DOCTYPE|ENTITY)\b", text, re.IGNORECASE):
@@ -141,6 +143,7 @@ def _parse_xml(text: str, label: str = "XML") -> ET.Element:
 
 
 def _local_name(name: str) -> str:
+    """Palauttaa elementin tai attribuutin paikallisen nimen ilman nimiavaruutta."""
     return name.rsplit("}", 1)[-1]
 
 
@@ -160,6 +163,7 @@ def _unwrap_cdata(text: str) -> str:
 
 
 def _compact_base64(candidate: str) -> str:
+    """Yhtenäistää Base64-merkit ja rivinvaihdot sekä tarkistaa täytteen."""
     candidate = candidate.replace(r"\r\n", "").replace(r"\n", "").replace(r"\r", "")
     compact = "".join(candidate.split()).replace("-", "+").replace("_", "/")
     if not compact or not re.fullmatch(r"[A-Za-z0-9+/]*={0,2}", compact):
@@ -174,6 +178,7 @@ def _compact_base64(candidate: str) -> str:
 
 
 def _decode_base64(candidate: str, *, explicit: bool, media_type: str | None = None) -> str | None:
+    """Purkaa tekstiliitteen ja nostaa virheen vain nimenomaisesti merkityistä liitteistä."""
     try:
         if media_type:
             mime = media_type.split(";", 1)[0].strip().lower()
@@ -227,6 +232,7 @@ def _json_strings(value):
 
 
 def _xml_elements_with_media_type(root: ET.Element):
+    """Käy XML-elementit läpi ja välittää ylemmältä tasolta perityn mediatyypin."""
     pending = [(root, None)]
     while pending:
         element, inherited_type = pending.pop()
@@ -237,6 +243,7 @@ def _xml_elements_with_media_type(root: ET.Element):
 
 
 def _collect_texts(source: str) -> tuple[list[str], list[str]]:
+    """Kerää tarkistettavat tekstit ja puretut liitteet XML:stä, JSONista ja Base64:stä."""
     if not isinstance(source, str):
         raise TypeError("Tarkistettavan sisällön on oltava tekstiä.")
     if len(source) > MAX_INPUT_CHARS:
@@ -249,6 +256,7 @@ def _collect_texts(source: str) -> tuple[list[str], list[str]]:
     decoded_blocks = 0
 
     def add_decoded(candidate: str, depth: int, explicit: bool, media_type: str | None = None):
+        """Lisää uuden puretun liitteen jonoon määrä- ja syvyysrajojen puitteissa."""
         nonlocal decoded_blocks
         key = (candidate, explicit, media_type)
         if key in decoded_seen:
@@ -345,6 +353,7 @@ def find_non_test_hetus(xml_text: str) -> list[str]:
 
 
 def _clinical_documents(root: ET.Element, *, frame: bool = False) -> list[ET.Element]:
+    """Etsii HL7-asiakirjat ja hyväksyy siirtokehyksessä myös clinicalDocument-nimen."""
     names = {f"{{{HL7_NAMESPACE}}}ClinicalDocument"}
     if frame:
         names.add(f"{{{HL7_NAMESPACE}}}clinicalDocument")
@@ -352,6 +361,7 @@ def _clinical_documents(root: ET.Element, *, frame: bool = False) -> list[ET.Ele
 
 
 def _serialise_embedded(document: ET.Element, source: str) -> str:
+    """Poimii sisäisen asiakirjan säilyttäen alkuperäiset nimiavaruudet ja etuliitteet."""
     # Säilytetään alkuperäiset prefixit, QName-arvot ja sisäiset xmlns=""-rajat.
     # ElementTree-sarjoitus kadottaisi osan näistä nimialuesuhteista.
     expected = document.tag.removeprefix("{")
@@ -362,9 +372,11 @@ def _serialise_embedded(document: ET.Element, source: str) -> str:
     inherited = {}
 
     def on_namespace(prefix, uri):
+        """Kerää seuraavan aloituselementin nimiavaruusmääritykset."""
         pending_ns.append((prefix or "", uri or ""))
 
     def on_start(name, _attrs):
+        """Päivittää nimiavaruuspinon ja tallentaa poimittavan asiakirjan aloituskohdan."""
         nonlocal scope, start, target_depth, inherited
         scopes.append(scope)
         local_namespaces = dict(pending_ns)
@@ -376,6 +388,7 @@ def _serialise_embedded(document: ET.Element, source: str) -> str:
             inherited = {prefix: uri for prefix, uri in scope.items() if prefix not in local_namespaces}
 
     def on_end(name):
+        """Tallentaa asiakirjan loppukohdan ja palauttaa ylemmän tason nimiavaruudet."""
         nonlocal scope, end
         if name == expected and len(scopes) == target_depth:
             index = parser.CurrentByteIndex

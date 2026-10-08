@@ -1,4 +1,4 @@
-"""Response handling regressions without external requests or Streamlit."""
+"""Vastaustulkinnan regressiotestit ilman ulkoisia pyyntöjä tai Streamlitia."""
 
 from dataclasses import FrozenInstanceError
 import json
@@ -13,25 +13,30 @@ from validator_response import interpret_response  # noqa: E402
 
 class ResponseInterpretationTests(unittest.TestCase):
     def interpret(self, status, content_type, body):
+        """Tulkitsee testivastauksen yhteisellä SP1-palvelupyyntökoodilla."""
         return interpret_response(status, content_type, body, "SP1")
 
     def test_empty_200_is_success(self):
+        """Varmistaa tyhjän HTTP 200 -vastauksen tulkinnan onnistumiseksi."""
         result = self.interpret(200, "", "")
         self.assertTrue(result.success)
         self.assertEqual(200, result.status_code)
         self.assertTrue(result.message)
 
     def test_whitespace_only_200_is_success(self):
+        """Varmistaa pelkkiä tyhjemerkkejä sisältävän HTTP 200 -vastauksen hyväksynnän."""
         result = self.interpret(200, "text/plain", " \n\t")
         self.assertTrue(result.success)
         self.assertEqual(" \n\t", result.response_text)
 
     def test_response_result_is_immutable(self):
+        """Varmistaa, ettei valmista vastaustulosta voi muuttaa."""
         result = self.interpret(200, "", "")
         with self.assertRaises(FrozenInstanceError):
             result.success = False
 
     def test_nonempty_200_is_not_assumed_success(self):
+        """Varmistaa, ettei sisältöä palauttavaa HTTP 200 -vastausta tulkita onnistumiseksi."""
         for body in ("Unexpected reply", "{}", '{"description":"problem"}'):
             with self.subTest(body=body):
                 result = self.interpret(200, "application/json", body)
@@ -40,6 +45,7 @@ class ResponseInterpretationTests(unittest.TestCase):
                 self.assertTrue(result.message)
 
     def test_html_body_preserved_for_download_without_execution(self):
+        """Varmistaa HTML-vastauksen säilymisen latausta varten ilman sen suorittamista."""
         body = '<html><script>alert("unsafe")</script><body>Virhe</body></html>'
         for content_type in ("text/html; charset=UTF-8", "TEXT/HTML", "application/xhtml+xml"):
             with self.subTest(content_type=content_type):
@@ -52,6 +58,7 @@ class ResponseInterpretationTests(unittest.TestCase):
                 self.assertFalse(result.formatted_description)
 
     def test_request_rejected_html_reports_support_id_for_any_status(self):
+        """Varmistaa estävän HTML-sivun tukitunnisteen näyttämisen kaikilla tilakoodeilla."""
         body = (
             "<html><head><title>Request Rejected</title></head><body>"
             "The requested URL was rejected. Please consult with your administrator."
@@ -73,6 +80,7 @@ class ResponseInterpretationTests(unittest.TestCase):
                 self.assertIsNone(result.formatted_description)
 
     def test_request_rejected_html_without_support_id_is_preserved(self):
+        """Varmistaa estävän HTML-sivun säilymisen myös ilman tukitunnistetta."""
         body = (
             "<html><head><title>Request Rejected</title></head><body>"
             "The requested URL was rejected.</body></html>"
@@ -87,6 +95,7 @@ class ResponseInterpretationTests(unittest.TestCase):
         self.assertIsNone(result.formatted_description)
 
     def test_generic_html_keeps_existing_message(self):
+        """Varmistaa tavallisen HTML-virhesivun virheviestin ja sisällön säilymisen."""
         for body in (
             "<html><head><title>Server Error</title></head><body>Virhe</body></html>",
             "<html><head><title>Request Rejected</title></head><body>Muu virhe</body></html>",
@@ -101,6 +110,7 @@ class ResponseInterpretationTests(unittest.TestCase):
                 self.assertFalse(result.success)
 
     def test_null_or_non_object_json_is_preserved(self):
+        """Varmistaa null-arvon ja muiden kuin JSON-objektien säilymisen vastauksessa."""
         values = (None, [], [1, {"description": "item"}], 42, "teksti", True)
         for value in values:
             with self.subTest(value=value):
@@ -113,6 +123,7 @@ class ResponseInterpretationTests(unittest.TestCase):
                 self.assertFalse(result.formatted_description)
 
     def test_missing_or_nontext_description_never_crashes(self):
+        """Varmistaa puuttuvan tai muun kuin tekstimuotoisen virhekuvauksen käsittelyn."""
         values = ({}, {"error": "virhe"}, {"description": None}, {"description": 1}, {"description": []})
         for value in values:
             with self.subTest(value=value):
@@ -122,6 +133,7 @@ class ResponseInterpretationTests(unittest.TestCase):
                 self.assertFalse(result.formatted_description)
 
     def test_text_description_is_formatted_and_reason_is_included(self):
+        """Varmistaa virhekuvauksen muotoilun ja palvelupyyntökoodin sisällyttämisen."""
         value = {"description": "1: Ensimmäinen virhe; 2: Toinen virhe;", "code": "TEST"}
         result = self.interpret(400, "application/json", json.dumps(value))
         self.assertFalse(result.success)
@@ -132,6 +144,7 @@ class ResponseInterpretationTests(unittest.TestCase):
         self.assertEqual(value, json.loads(result.response_text))
 
     def test_malformed_json_and_plain_error_are_preserved(self):
+        """Varmistaa virheellisen JSON:n ja tekstivastauksen säilymisen."""
         cases = (
             ("application/json", '{"description":'),
             ("text/plain", "Palvelin ei vastannut oikein. ääkköset"),

@@ -47,6 +47,49 @@ nimenomaisesti ilmoitettu binäärinen sisältö, jota tarkistus ei tue, lähety
 pysäytetään. Henkilötunnusten tarkistus ei korvaa aineiston anonymisointia:
 myös muut henkilötiedot on poistettava testiaineistosta.
 
+## Henkilötietokenttien korvaus
+
+Syötettyjen sanomien tunnettuja henkilötietokenttiä voi korvata paikallisesti
+painikkeella **Korvaa henkilötietokentät**. Korvaus muodostaa uudet XML-kopiot:
+alkuperäiset syötteet ja tiedostot säilyvät muuttumattomina. Korvatut sanomat
+näkyvät käyttöliittymässä ja ovat ladattavissa UTF-8-muotoisina XML-tiedostoina.
+
+Korvatun asiakirjan `urn:hl7finland`-nimiavaruuden JSON-sisällöt puretaan
+Base64-muodosta ja näytetään sisennettyinä asiakirjan XML:ssä. Myös ladattava
+asiakirjakopio sisältää JSONin luettavana tekstinä, joten sen kentät voi
+tarkistaa XML:n sisältä. JSONin teksti on CDATA-osiossa, jotta esimerkiksi
+merkit `<` ja `&` säilyvät oikein.
+
+Korvaustoiminnot ovat `validator_replacer.py`-moduulissa. Ne käsittelevät
+XML:n henkilötunnus-, nimi- ja syntymäaikakenttiä sekä upotetun JSON:n
+tunnettuja henkilötieto- ja yhteystietokenttiä. XHTML-näyttömuoto korvataan
+tyhjällä näyttömuodolla. XML:n nimiavaruudet sekä asiakirjan `id/@root`- ja
+`setId/@root`-tunnisteet säilyvät.
+
+Tarkista korvatut sanomat ja lataa ne tarvittaessa ennen lähettämistä.
+Vahvista tarkistus valintaruudulla ja valitse **Validoi korvatut sanomat**.
+Korvauspainike ei lähetä tietoja verkkoon. Validointi tekee edelleen normaalit
+paikalliset tarkistukset ennen palvelupyyntöä. Syötteiden muuttaminen poistaa
+aiemmat korvauskopiot ja niiden lähetysvahvistuksen.
+
+Ennen lähetystä sovellus koodaa asiakirjan JSON-sisällöt takaisin UTF-8:n
+Base64-muotoon. Tarkistettava ja ladattava kopio säilyy luettavana. Ladatun
+tarkistus-XML:n voi myös syöttää myöhemmin asiakirjakenttään ja validoida
+painikkeella **Suorita validointi**: JSON koodataan silloinkin ennen lähetystä.
+
+Korvaus käsittelee tunnettuja kenttiä, eikä se takaa koko aineiston
+anonymisointia. Myös vapaateksti, muut kentät ja liitteet on tarkistettava.
+`replacer.py` säilyttää vanhat tuontinimet, mutta käyttöliittymätoiminnot
+ovat Streamlit-sovelluksessa.
+
+## Versiopäivitykset
+
+Version 3.3 muutoskooste ja aiempien versioiden historia avautuvat erilliseen
+ikkunaan painikkeella **Versiopäivitykset**. Uusin versio näkyy avattuna,
+ja vanhempien versioiden muutokset voi avata samasta ikkunasta. Historian
+avaaminen säilyttää syötteet, korvauskopiot, tarkistusvahvistuksen ja
+validointituloksen eikä käynnistä uutta validointipyyntöä.
+
 ## Vastaukset
 
 Onnistunut validointi on tyhjä HTTP 200 -vastaus. Virhevastaukset säilyvät

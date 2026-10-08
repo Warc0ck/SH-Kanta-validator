@@ -28,6 +28,7 @@ share/python-wheels/
 *.egg
 .agents/
 AGENTS.md
+output/
 
 # Environment variables & secrets
 .env

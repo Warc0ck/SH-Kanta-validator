@@ -114,6 +114,8 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(args[0], [str(self.python), "-c", bootstrap._PROBE_SCRIPT, json.dumps(self.requirements)])
         self.assertTrue(kwargs["capture_output"])
         self.assertEqual(kwargs["timeout"], 30)
+        self.assertIs(kwargs["shell"], False)
+        self.assertIs(kwargs["check"], True)
 
     def test_environment_rejects_wrong_prefix_old_python_and_mismatched_packages(self):
         """Estää vanhan Pythonin, väärän ympäristön ja väärät pakettiversiot."""
@@ -129,7 +131,8 @@ class BootstrapTests(unittest.TestCase):
         """Näyttää epäonnistuneen Pythonin, virheellisen vastauksen ja aikakatkaisun virheinä."""
         self.create_python()
         cases = (
-            subprocess.CompletedProcess([], 1, "", "Python ei toimi"),
+            subprocess.CalledProcessError(1, [str(self.python)], stderr="Python ei toimi"),
+            subprocess.CalledProcessError(1, [str(self.python)]),
             subprocess.CompletedProcess([], 0, "ei JSONia", ""),
             subprocess.TimeoutExpired([str(self.python)], 30),
             OSError("Python ei käynnisty"),
@@ -325,9 +328,10 @@ class BootstrapTests(unittest.TestCase):
         command = [str(self.python), "-m", "pip", "install", "-r", str(self.requirements_path)]
         self.process.return_value = subprocess.CompletedProcess(command, 0)
         self.assertTrue(bootstrap._run_command(command))
-        self.process.assert_called_once_with(command, check=False)
-        self.process.return_value = subprocess.CompletedProcess(command, 1)
+        self.process.assert_called_once_with(command, shell=False, check=True, env=None)
+        self.process.side_effect = subprocess.CalledProcessError(1, command)
         self.assertFalse(bootstrap._run_command(command))
+        self.assertIn("Komento epäonnistui (paluuarvo 1).", self.output.getvalue())
         self.process.side_effect = OSError("Testivirhe")
         self.assertFalse(bootstrap._run_command(command))
 
@@ -347,7 +351,7 @@ class BootstrapTests(unittest.TestCase):
         command = [str(self.python), "-m", "pip", "install"]
         self.process.return_value = subprocess.CompletedProcess(command, 0)
         self.assertTrue(bootstrap._run_command(command, environment=environment))
-        self.process.assert_called_once_with(command, check=False, env=environment)
+        self.process.assert_called_once_with(command, shell=False, check=True, env=environment)
 
     def test_missing_requirements_and_failed_exec_exit_clearly(self):
         """Lopettaa puuttuvaan vaatimuslistaan tai epäonnistuvaan käynnistykseen selkeällä virheellä."""

@@ -94,11 +94,9 @@ def _check_environment(
             capture_output=True,
             text=True,
             timeout=30,
-            check=False,
+            shell=False,
+            check=True,
         )
-        if result.returncode != 0:
-            detail = result.stderr.strip() or "Pythonin käynnistys epäonnistui."
-            return EnvironmentCheck(False, (detail,))
         data = json.loads(result.stdout.strip().splitlines()[-1])
         supported = tuple(data["version"]) >= MINIMUM_PYTHON
         prefix_matches = venv_path is not None and Path(data["prefix"]).resolve() == venv_path.resolve()
@@ -108,6 +106,9 @@ def _check_environment(
         if venv_path is not None and not prefix_matches:
             problems.insert(0, "Python ei kuulu projektin .venv-ympäristöön; sitä ei muokata.")
         return EnvironmentCheck(not problems, tuple(problems), prefix_matches, supported, bool(data["has_pip"]))
+    except subprocess.CalledProcessError as error:
+        detail = (error.stderr or "").strip() or "Pythonin käynnistys epäonnistui."
+        return EnvironmentCheck(False, (detail,))
     except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, IndexError, TypeError) as error:
         return EnvironmentCheck(False, (f"Ympäristön tarkistus epäonnistui: {error}",))
 
@@ -115,15 +116,12 @@ def _check_environment(
 def _run_command(command: list[str], *, environment: dict[str, str] | None = None) -> bool:
     """Suorittaa valmistelukomennon näkyvällä tulosteella ja palauttaa onnistumistiedon."""
     try:
-        kwargs = {"check": False}
-        if environment is not None:
-            kwargs["env"] = environment
-        result = subprocess.run(command, **kwargs)
+        subprocess.run(command, shell=False, check=True, env=environment)
+    except subprocess.CalledProcessError as error:
+        print(f"Komento epäonnistui (paluuarvo {error.returncode}).")
+        return False
     except OSError as error:
         print(f"Komennon suoritus epäonnistui: {error}")
-        return False
-    if result.returncode != 0:
-        print(f"Komento epäonnistui (paluuarvo {result.returncode}).")
         return False
     return True
 

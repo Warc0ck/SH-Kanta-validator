@@ -16,7 +16,7 @@ def _is_streamlit_runtime():
     return runtime is not None and runtime.exists()
 
 
-# Valmistelu tapahtuu ennen kolmannen osapuolen tuonteja vain terminaalista.
+# Valmistelu tapahtuu ennen kirjastojen tuonteja vain terminaalista.
 if __name__ == "__main__" and not _is_streamlit_runtime():
     launch_from_terminal(Path(__file__).resolve(), sys.argv[1:])
     raise SystemExit(0)
@@ -68,7 +68,9 @@ VERSION_HISTORY = (
 
 
 def _input_signature(frame_source, document_source):
-    """Liittää tallennetun tuloksen täsmälleen käytettyihin syötteisiin."""
+    """Liittää tallennetun tuloksen täsmälleen käytettyihin syötteisiin.
+    Tämä estää vanhentuneiden tulosten näyttämisen, jos syötteet muuttuvat.
+    """
     digest = sha256()
     for source in (frame_source, document_source):
         value = source.encode("utf-8") if isinstance(source, str) else (source or b"")
@@ -96,7 +98,7 @@ def _run_validation(frame_source, document_source, signature, source_names, *, r
         document_source = encode_document_json_for_sending(document_source)
         payload, checks = prepare_validation_request(frame_source, document_source)
     except ValueError as exc:
-        saved["error"] = f"⛔ Validointi pysäytetty: {exc}"
+        saved["error"] = f"⛔ Validointi pysäytetty:\n\n {exc}"
         return saved
 
     saved["checks"] = checks
@@ -105,7 +107,7 @@ def _run_validation(frame_source, document_source, signature, source_names, *, r
         try:
             response = requests.post(VALIDATOR_URL, json=payload, timeout=30)
         except requests.RequestException as exc:
-            saved["error"] = f"Virhe lähetettäessä sanomaa: {exc}"
+            saved["error"] = f"Virhe lähetettäessä sanomaa:\n\n {exc}"
             return saved
     saved["response"] = interpret_response(
         response.status_code,
@@ -120,7 +122,7 @@ def _render_result(saved, current_signature):
     """Näyttää myös aiemmalla suorituksella muodostetut raportit."""
     if saved["signature"] != current_signature:
         st.warning(
-            "Syötteet ovat muuttuneet. Alla näkyvä tulos koskee edellisiä syötteitä. "
+            "Syötteet ovat muuttuneet. Alla näkyvä tulos koskee edellisiä syötteitä.\n\n "
             "Suorita validointi uudelleen päivitetylle aineistolle."
         )
     sources = " / ".join(name for name in saved["source_names"] if name)

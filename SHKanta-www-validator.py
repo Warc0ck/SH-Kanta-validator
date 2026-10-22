@@ -125,8 +125,7 @@ def _render_result(saved, current_signature):
             "Syötteet ovat muuttuneet. Alla näkyvä tulos koskee edellisiä syötteitä.\n\n "
             "Suorita validointi uudelleen päivitetylle aineistolle."
         )
-    sources = " / ".join(name for name in saved["source_names"] if name)
-    if sources:
+    if sources := " / ".join(name for name in saved["source_names"] if name):
         st.caption(f"Validoidut syötteet: {sources}")
     if saved.get("replaced"):
         st.caption("Validointi tehtiin korvatuilla sanomilla.")
@@ -226,12 +225,15 @@ def _render_replacements(replaced, current_signature):
                 mime="application/xml", on_click="ignore", key=key,
             )
         confirmed = confirm_sending()
-        if st.button("Validoi korvatut sanomat", key="validate_replaced", disabled=not confirmed):
-            if confirmed and replaced["signature"] == current_signature:
-                st.session_state[RESULT_KEY] = _run_validation(
-                    replaced["frame_xml"], replaced["document_xml"], current_signature,
-                    replaced["source_names"], replaced=True,
-                )
+        if (
+            st.button("Validoi korvatut sanomat", key="validate_replaced", disabled=not confirmed)
+            and confirmed
+            and replaced["signature"] == current_signature
+        ):
+            st.session_state[RESULT_KEY] = _run_validation(
+                replaced["frame_xml"], replaced["document_xml"], current_signature,
+                replaced["source_names"], replaced=True,
+            )
 
 
 @st.dialog("Versiopäivitykset", width="large")
